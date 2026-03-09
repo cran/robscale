@@ -1,9 +1,9 @@
-#include <Rcpp.h>
 #include "robust_core.h"
+#include <Rcpp.h>
 
 // [[Rcpp::export]]
 double rob_scale_impl(Rcpp::NumericVector x, bool has_loc, double loc_val,
-                      double implbound, int maxit, double tol) {
+                      double implbound, int maxit, double tol, int fallback) {
   int n = x.size();
   const double* xp = x.begin();
 
@@ -11,7 +11,7 @@ double rob_scale_impl(Rcpp::NumericVector x, bool has_loc, double loc_val,
   double buf_stack[STACK_BUF_SIZE * 3];
   std::unique_ptr<double[]> heap;
   double* arena;
-  if (n * 3 <= STACK_BUF_SIZE * 3) {
+  if (ROBSCALE_LIKELY(n * 3 <= STACK_BUF_SIZE * 3)) {
     arena = buf_stack;
   } else {
     heap.reset(new double[n * 3]);
@@ -38,23 +38,28 @@ double rob_scale_impl(Rcpp::NumericVector x, bool has_loc, double loc_val,
     minobs = 4;
   }
 
-  // Small-sample fallback
-  if (n < minobs) {
-    if (has_loc) {
-      std::memcpy(extra, xp, n * sizeof(double));
-      double med_orig = median_select(extra, n);
-      double mad_orig = mad_select(xp, n, med_orig, abs_buf);
-      return (mad_orig <= implbound)
-        ? adm_core(xp, n, med_orig, ADM_CONSISTENCY)
-        : mad_orig;
+  // Small-sample fallback (matches revss behavior)
+  if (ROBSCALE_UNLIKELY(n < minobs)) {
+    if (s <= implbound) {
+      if (ROBSCALE_UNLIKELY(fallback == 1)) return NA_REAL; // "na" fallback
+      if (has_loc) {
+        std::memcpy(extra, xp, n * sizeof(double));
+        double med_orig = median_select(extra, n);
+        double mad_orig = mad_select(xp, n, med_orig, abs_buf);
+        return (mad_orig <= implbound)
+          ? adm_core(xp, n, med_orig, ADM_CONSISTENCY)
+          : mad_orig;
+      } else {
+        return adm_core(xp, n, t, ADM_CONSISTENCY);
+      }
     } else {
-      return (s <= implbound)
-        ? adm_core(xp, n, t, ADM_CONSISTENCY)
-        : s;
+      return s;
     }
   }
 
-  if (s == 0.0) return 0.0;
+  // MAD collapse for n >= minobs
+  if (ROBSCALE_UNLIKELY(s <= implbound && fallback == 1)) return NA_REAL;
+  if (ROBSCALE_UNLIKELY(s == 0.0)) return adm_core(xp, n, t, ADM_CONSISTENCY);
 
   // Multiplicative iteration with bulk_tanh
   const double* data = has_loc ? w : xp;

@@ -1,3 +1,45 @@
+# robscale 0.1.5
+
+* CRAN: Removed `#pragma GCC diagnostic ignored "-Wdeprecated-volatile"` from
+  `src/qn_estimator.cpp`, `src/sn_estimator.cpp`, and `src/qnsn_sort_utils.h`
+  to resolve the "pragmas suppressing diagnostics" NOTE requested by CRAN
+  maintainers.
+* Windows: Added `configure.win` and `cleanup.win` to suppress spurious
+  win-builder warnings about missing Windows configuration.
+* CI: Added GitHub Actions R-CMD-check workflow with multi-platform matrix
+  (Windows, macOS, Ubuntu) as independent evidence of Windows compilation.
+* Portability: Fixed uninitialized NEON register in `qnsn_kernels.h` that
+  Clang 17 on macOS promoted to a compilation WARNING.
+* Build: Switched `RcppParallel::LdFlags()` to the canonical
+  `RcppParallel::RcppParallelLibs()` in `Makevars.win` and `Makevars.in`.
+
+# robscale 0.1.4
+
+* Portability: Fixed macOS (Apple Silicon) compilation error by switching to
+  the more portable `<Accelerate/Accelerate.h>` include and resolving a
+  symbol conflict with R's `COMPLEX` type.
+* Portability: Restored explicit `CXX_STD = CXX17` in Makevars (required by
+  CRAN policy for packages using C++17 features).
+* Portability: Removed non-portable GCC pragmas to silence warnings on Clang
+  (win-builder Debian).
+* CRAN: Retained `GNU make` in `SystemRequirements` (`$(shell)` is a GNU
+  extension used for RcppParallel linking).
+* CRAN: Added `inst/WORDLIST` to whitelist technical terms from `aspell`.
+* CRAN: Quoted 'Qn' and 'Sn' in `DESCRIPTION` to satisfy metadata checks.
+* Build: Resolved duplicate `-ltbb` flag from `Makevars` which caused warnings
+  on some macOS configurations.
+
+# robscale 0.1.3
+
+* Added high-efficiency scale estimators: `qn()` and `sn()` (Rousseeuw &
+  Croux, 1993) with specialized sorting network kernels and cache-aware
+  parallelization.
+* Added `robustbase` to `Suggests` for reference and benchmarking.
+* Added documentation examples for all five exported functions.
+* Performance optimizations: Fixed `configure` script to ensure that
+  hardware-specific SIMD flags (e.g., `-mavx2`) are strictly opt-in
+  via `ROBSCALE_FAST=1`.
+
 # robscale 0.1.1
 
 * Consistent NA handling: `adm()` now raises an error when `na.rm = FALSE` and
@@ -17,17 +59,17 @@
 
 Initial release.
 
-* Three functions: `adm()`, `robLoc()`, `robScale()` implementing the robust
-  location and scale M-estimators of Rousseeuw & Verboven (2002) for very small
-  samples.
+* Three functions: `adm()`, `robLoc()`, and `robScale()` implementing
+  the robust location and scale M-estimators of Rousseeuw & Verboven (2002)
+  for very small samples.
 * API-compatible drop-in replacement for the `revss` package.
 * C++17 implementation via Rcpp with:
-    - Newton--Raphson iteration for location (quadratic convergence).
-    - Algebraic `tanh(x/2)` identity for the logistic psi function with
-      platform-vectorized bulk evaluation (Apple Accelerate on macOS,
-      OpenMP SIMD hints on Linux).
-    - Floyd--Rivest O(n) selection for median computation.
-    - Optimal sorting networks for n <= 8.
-    - Stack-allocated arena buffers (zero heap allocation for n <= 512).
+  * Newton--Raphson iteration for location (quadratic convergence).
+  * Algebraic `tanh(x/2)` identity for the logistic psi function with
+    platform-vectorized bulk evaluation (Apple Accelerate on macOS,
+    OpenMP SIMD hints on Linux).
+  * Floyd--Rivest O(n) selection for median computation.
+  * Optimal sorting networks for n <= 8.
+  * Stack-allocated arena buffers (zero heap allocation for n <= 512).
 * Numerical equivalence with `revss` verified across 5,400 systematic
   comparisons (tolerance: sqrt(.Machine$double.eps)).

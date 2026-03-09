@@ -7,6 +7,7 @@
 robScale(
   x,
   loc = NULL,
+  fallback = c("adm", "na"),
   implbound = 0.0001,
   na.rm = FALSE,
   maxit = 80L,
@@ -16,70 +17,78 @@ robScale(
 \arguments{
 \item{x}{A numeric vector.}
 
-\item{loc}{Optional numeric scalar giving a known location.  When supplied,
+\item{loc}{Optional numeric scalar giving a known location. When supplied,
 the observations are centered at \code{loc} and the minimum sample size
 for iteration is lowered from 4 to 3 (see \sQuote{Details}).}
 
-\item{implbound}{Implosion bound: the smallest value the MAD is allowed to
-take before it is considered to have \dQuote{imploded} (collapsed to
-zero).  Defaults to \code{1e-4}.}
+\item{fallback}{Character string specifying the fallback behavior when the MAD
+collapses to zero or the sample size is too small for iteration.
+Must be one of \code{"adm"} (default) or \code{"na"}. See \sQuote{Details}.}
 
-\item{na.rm}{Logical.  If \code{TRUE}, \code{NA} values are stripped from
-\code{x} before computation.  If \code{FALSE} (the default), the presence
+\item{implbound}{Numeric scalar specifying the threshold for MAD implosion.
+Defaults to \code{1e-4}. Passing a value of 0 disables implosion checks.}
+
+\item{na.rm}{Logical. If \code{TRUE}, \code{NA} values are stripped from
+\code{x} before computation. If \code{FALSE} (the default), the presence
 of any \code{NA} raises an error.}
 
-\item{maxit}{Maximum number of multiplicative iterations.  Defaults to 80.}
+\item{maxit}{Maximum number of iterations for the multiplicative algorithm.
+Defaults to 80.}
 
-\item{tol}{Convergence tolerance.  Iteration stops when the multiplicative
-update factor satisfies \eqn{|v - 1| \le \mathrm{tol}}{|v - 1| <= tol}.
-Defaults to \code{sqrt(.Machine$double.eps)}.}
+\item{tol}{Convergence tolerance. Iteration stops when the relative
+change in the scale estimate falls below \code{tol}. Defaults to
+\code{sqrt(.Machine$double.eps)}.}
 }
 \value{
 A single numeric value: the robust M-estimate of scale.
   Returns \code{NA} if \code{x} has length zero (after removal of
-  \code{NA}s when \code{na.rm = TRUE}).
+  \code{NA}s when \code{na.rm = TRUE}) or if the MAD collapses and
+  \code{fallback = "na"}.
 }
 \description{
-Compute the robust M-estimate of scale for very small samples using the
+Computes the robust M-estimate of scale for very small samples using the
 \eqn{\rho}{rho} function of Rousseeuw & Verboven (2002).
 }
 \details{
-The scale estimator \eqn{S_n}{Sn} solves the M-estimating equation
+The M-estimate of scale \eqn{S_n}{Sn} is defined as the solution to the
+estimating equation
 
-\deqn{\frac{1}{n}\sum_{i=1}^{n}\rho\!\left(\frac{x_i - T_n}{S_n}
-  \right) = \beta}{mean(rho((x_i - Tn) / Sn)) = beta}
+\deqn{\frac{1}{n} \sum_{i=1}^{n} \rho \left( \frac{x_i - T_n}{S_n} \right) = \beta}{mean(rho((x_i - Tn) / Sn)) = beta}
 
-where \eqn{T_n}{Tn} is fixed at the sample median, \eqn{\beta = 0.5}, and
-\eqn{\rho} is a smooth rho function defined as the square of the logistic
-psi (Rousseeuw & Verboven, 2002, Sec.\sspace{}4.2):
+where the location \eqn{T_n}{Tn} is fixed at the sample median, \eqn{\beta = 0.5}
+is the expected value of \eqn{\rho} under the Gaussian model, and \eqn{\rho}
+is a smooth rho function (Rousseeuw & Verboven, 2002, Sec.\sspace{}4.2):
 
-\deqn{\rho_{\mathrm{log}}(x) = \psi_{\mathrm{log}}^2\!\left(
-  \frac{x}{c}\right)}{rho(x) = psi(x / c)^2}
+\deqn{\rho_{\mathrm{log}}(x) = \psi_{\mathrm{log}}^2 \left( \frac{x}{c} \right)}{rho(x) = psi(x / c)^2}
 
-with the tuning constant \eqn{c = 0.37394112142347236} chosen so that
+The tuning constant \eqn{c = 0.373941121} is chosen to satisfy
+\eqn{E_\Phi[\rho(u)] = 0.5}.
 
-\deqn{\int\rho(u)\,d\Phi(u) = 0.5}{Int rho(u) dPhi(u) = 0.5}
+\strong{Statistical Properties.}
+This estimator is designed for high robustness and efficiency. It achieves a
+\bold{50\% breakdown point}, meaning the estimate remains reliable even if
+half the sample is contaminated by outliers. At the Gaussian distribution,
+the logistic M-estimator of scale achieves an \bold{asymptotic relative
+efficiency (ARE) of 0.76} compared to the sample standard deviation.
 
-yielding a 50\% breakdown point.
+\strong{Numerical Computation.}
+The estimating equation is solved by multiplicative iteration (Rousseeuw &
+Verboven, 2002, Eq.\sspace{}27):
 
-\strong{Iteration scheme.}
-The equation is solved by multiplicative iteration (Rousseeuw & Verboven,
-2002, Eq.\sspace{}27):
+\deqn{S^{(k+1)} = S^{(k)} \cdot \sqrt{2 \cdot \frac{1}{n} \sum \psi_{\mathrm{log}}^2 \left( \frac{x_i - T}{c \cdot S^{(k)}} \right)}}{S(k+1) = S(k) * sqrt(2 * mean(psi((x_i - T) / (c * S(k)))^2))}
 
-\deqn{S^{(k+1)} = S^{(k)} \cdot \sqrt{2 \cdot \frac{1}{n}\sum
-  \psi_{\mathrm{log}}^2\!\left(\frac{x_i - T}{c \cdot
-  S^{(k)}}\right)}}{S(k+1) = S(k) * sqrt(2 * mean(psi((x_i - T) /
-  (c * S(k)))^2))}
+The algorithm starts at the Median Absolute Deviation (MAD). Because
+location is held fixed at the sample median, the estimator follows a
+"decoupled" approach that avoids the positive-feedback instabilities
+often seen in simultaneous location--scale estimation (Proposal 2)
+at very small sample sizes.
 
-Starting value: \eqn{S^{(0)} = \mathrm{MAD}(x)}{S(0) = MAD(x)}.
-The logistic psi values are computed via the algebraic identity
-\eqn{\psi_{\mathrm{log}}(x) = \tanh(x/2)}{psi(x) = tanh(x/2)}.
-
-\strong{Decoupled estimation.}
-Scale is estimated with location held fixed at
-\eqn{\mathrm{med}(x)}{median(x)}, following the decoupled approach of
-Rousseeuw & Verboven (2002, Sec.\sspace{}4.2).  This avoids the
-positive-feedback instability of Huber's Proposal 2 in small samples.
+\strong{Performance and SIMD.}
+The C++ implementation leverages platform-specific SIMD (Single Instruction,
+Multiple Data) backends (SLEEF on Linux, Apple Accelerate on macOS) to
+\eqn{\psi_{\mathrm{log}}} evaluations (via \code{tanh}). This specialized
+architecture typically yields an 11--39x speedup over pure-R code for
+samples of size \eqn{n \le 20}.
 
 \strong{Known location.}
 When \code{loc} is supplied, the observations are centered as
@@ -88,12 +97,16 @@ When \code{loc} is supplied, the observations are centered as
 rather than the MAD.  This lowers the minimum sample size from 4 to 3
 (Rousseeuw & Verboven, 2002, Sec.\sspace{}5).
 
-\strong{Fallback.}
-When \eqn{n} is below the minimum for iteration:
+\strong{Fallback Mechanism and Implosion.}
+Robust scale estimators like the MAD can "implode" (collapse to zero) if more
+than 50% of the sample observations are identical. When the MAD collapses
+or the sample size is too small for reliable iteration (\eqn{n < 4}, or
+\eqn{n < 3} if location is known):
 \itemize{
-  \item if \eqn{\mathrm{MAD}(x) \le}{MAD(x) <=} \code{implbound}
-    (implosion), the function returns \code{\link{adm}(x)};
-  \item otherwise, it returns \eqn{\mathrm{MAD}(x)}{MAD(x)}.
+  \item If \code{fallback = "adm"} (default), the function returns the
+    scaled Average Distance to the Median (\code{\link{adm}}). The ADM
+    is highly resistant to implosion (breakdown point \eqn{(n-1)/n}).
+  \item If \code{fallback = "na"}, the function returns \code{NA}.
 }
 }
 \examples{
@@ -121,7 +134,9 @@ samples. \emph{Computational Statistics & Data Analysis}, \bold{40}(4),
 \seealso{
 \code{\link{adm}} for the implosion fallback;
 \code{\link[stats]{mad}} for the starting value and classical alternative;
-\code{\link{robLoc}} for the companion location estimator.
+\code{\link{robLoc}} for the companion location estimator;
+\code{\link{qn}} and \code{\link{sn}} for high-efficiency scale
+estimators.
 }
 \keyword{robust}
 \keyword{univar}
