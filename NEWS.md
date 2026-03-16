@@ -1,3 +1,37 @@
+# robscale 0.2.1
+
+* Performance: Refined runtime SIMD dispatch for `qn()` and `sn()` kernels,
+  achieving optimal vectorization across x86_64 (AVX2/FMA) and ARM64 (NEON).
+* New feature: `scale_robust()` provides a unified dispatcher that automatically
+  selects between a variance-weighted ensemble of 7 estimators (for small
+  samples) and the Gini Mean Difference (GMD) for larger samples (n >= 20).
+* New estimators: Added `gmd()`, `iqr_scaled()`, `mad_scaled()`, and `sd_c4()`
+  to the public API.
+* Confidence Intervals: Added `ci = TRUE` to all scale estimators, providing
+  analytical intervals (GMD, MAD, Sn, Qn, bias-corrected SD) or bootstrap-based
+  intervals (ensemble).
+* Performance: Replaced `stats::mad()` and `stats::IQR()` with optimized C++
+  implementations (`mad_scaled()`, `iqr_scaled()`) using O(n) selection via the
+  pdqselect algorithm.
+* Documentation: Expanded README with detailed benchmarking vs. `robustbase`,
+  `Hmisc`, `GiniDistance`, and `collapse`.
+* Citations: Consolidated and updated all package citations in `inst/CITATION`
+  and documentation.
+
+# robscale 0.1.6
+
+* Performance: Extended optimal sorting networks from n <= 8 to n <= 16 using
+  Dobbelaere's verified optimal networks. Cross-platform benchmarking confirmed
+  2-4x speedups over `std::sort` for n = 9-16 on both ARM64 (Apple Silicon)
+  and x86_64 (AMD Zen 3).
+* Bug fix: Corrected the n = 7 sorting network comparator sequence (was
+  producing incorrect sort order for certain inputs).
+* Bug fix: Restored ADM consistency constant to sqrt(pi/2) = 1.2533 (was
+  incorrectly changed to 1.3926).
+* Bug fix: Restored small-sample fallback logic in `robScale()` that was
+  inadvertently removed, causing incorrect results when MAD collapses for
+  n < 4.
+
 # robscale 0.1.5
 
 * CRAN: Removed `#pragma GCC diagnostic ignored "-Wdeprecated-volatile"` from
@@ -36,9 +70,9 @@
   parallelization.
 * Added `robustbase` to `Suggests` for reference and benchmarking.
 * Added documentation examples for all five exported functions.
-* Performance optimizations: Fixed `configure` script to ensure that
-  hardware-specific SIMD flags (e.g., `-mavx2`) are strictly opt-in
-  via `ROBSCALE_FAST=1`.
+* Performance optimizations: `configure` script auto-detects SIMD
+  capabilities (AVX2/FMA on x86_64, NEON on ARM64) without requiring
+  any environment variables.
 
 # robscale 0.1.1
 

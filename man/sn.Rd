@@ -4,7 +4,14 @@
 \alias{sn}
 \title{Robust Estimator of Scale Sn}
 \usage{
-sn(x, constant = 1.1926, finite.corr = TRUE, na.rm = FALSE)
+sn(
+  x,
+  constant = 1.1926,
+  finite.corr = TRUE,
+  na.rm = FALSE,
+  ci = FALSE,
+  level = 0.95
+)
 }
 \arguments{
 \item{x}{A numeric vector of observations.}
@@ -14,9 +21,16 @@ sn(x, constant = 1.1926, finite.corr = TRUE, na.rm = FALSE)
 \item{finite.corr}{Logical; if \code{TRUE}, a finite-sample correction factor is applied.}
 
 \item{na.rm}{Logical; if \code{TRUE}, \code{NA} values are removed before computation.}
+
+\item{ci}{Logical. If \code{TRUE}, return a \code{"robscale_ci"} object
+with the point estimate and asymptotic confidence interval.
+Default: \code{FALSE}.}
+
+\item{level}{Confidence level for the interval (default 0.95).}
 }
 \value{
-The \eqn{S_n} estimator of scale.
+If \code{ci = FALSE} (default), the \eqn{S_n} estimator of scale
+  (a scalar). If \code{ci = TRUE}, an object of class \code{"robscale_ci"}.
 }
 \description{
 Computes the robust estimator of scale \eqn{S_n} proposed by Rousseeuw and Croux (1993).
@@ -41,10 +55,13 @@ algorithm, avoiding the \eqn{O(n^2)} complexity of the naive definition.
 The execution strategy is tiered for maximum efficiency:
 \itemize{
   \item \bold{Optimal sorting networks} are used for the target regime of
-    very small samples (\eqn{n \le 8}). These networks minimize control
+    very small samples (\eqn{n \le 16}). These networks minimize control
     flow overhead and maximize pipeline utilization.
   \item \bold{Highly tuned kernels} are employed for general datasets,
     leveraging C++17 features for cache-aware computation.
+  \item \bold{Cache-aware parallelization} via Intel TBB (Threading Building
+    Blocks) for large-scale data, with thresholds derived from the detected
+    per-core L2 cache size.
 }
 }
 \examples{
@@ -52,9 +69,20 @@ sn(c(1:9))
 x <- c(1, 2, 3, 5, 7, 8)
 sn(x)
 
+# Asymptotic confidence interval
+sn(x, ci = TRUE)
+
 }
 \references{
 Rousseeuw, P. J., and Croux, C. (1993). Alternatives to the Median Absolute Deviation.
 \emph{Journal of the American Statistical Association}, \bold{88}(424), 1273--1283.
 \doi{10.1080/01621459.1993.10476408}
+
+Akinshin, A. (2022). Finite-sample Rousseeuw-Croux scale estimators.
+\emph{arXiv preprint arXiv:2209.12268}.
+}
+\seealso{
+\code{\link{qn}} for the \eqn{Q_n} scale estimator;
+  \code{\link{robScale}} for the M-estimator of scale;
+  \code{\link{adm}} for the average distance to median.
 }

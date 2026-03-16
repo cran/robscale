@@ -1,10 +1,10 @@
 #ifndef ROBSCALE_QNSN_RUNTIME_CONFIG_H
 #define ROBSCALE_QNSN_RUNTIME_CONFIG_H
 
+#include "robscale_config.h"
 #include "qnsn_hardware_info.h"
-#include "qnsn_thresholds.h"
 #include <cmath>
-#include <mutex>
+#include <algorithm>
 
 namespace robscale::qnsn {
 
@@ -20,6 +20,25 @@ public:
   size_t sn_stack_threshold;
   size_t sn_parallel_threshold;
   size_t qn_parallel_threshold;
+  size_t sort_boost_threshold;
+  size_t sort_tbb_threshold;
+  size_t pdq_median_threshold;
+  size_t pdq_robscale_threshold;  // adaptive threshold for rob_scale.cpp
+  size_t pdq_lowmedian_threshold; // adaptive threshold for Sn lowmedian
+  size_t pdq_qn_final_threshold;  // adaptive threshold for Qn final selection
+  size_t grain_size;
+
+  // Dynamic grain size for very large samples to avoid scheduling overhead
+  size_t get_dynamic_grain_size(size_t n) const {
+    if (n <= 1000000) return grain_size;
+    // Aim for 8 tasks per core for good load balancing
+    size_t target_tasks = hw.num_logical_cores * 8;
+    if (target_tasks == 0) target_tasks = 1;
+    size_t dynamic = n / target_tasks;
+    size_t d = (std::max)(grain_size, dynamic);
+    // Cap at 32k to avoid scheduling overhead at extreme n
+    return (std::min)(d, static_cast<size_t>(32768));
+  }
 
   // Hardware info
   HardwareInfo hw;
@@ -34,17 +53,48 @@ private:
   }
 
   void calculate_thresholds() {
-    qn_exact_threshold = QN_EXACT_THRESHOLD;
-    sn_stack_threshold = SN_STACK_THRESHOLD;
+    size_t per_core_l2 = hw.l2_per_core;  // Correct on all platforms
 
-    size_t parallel_thresh = hw.l2_cache_size / sizeof(double);
-    if (parallel_thresh < 8192)
-      parallel_thresh = 8192;
-    if (parallel_thresh > 32768)
-      parallel_thresh = 32768;
+    // --- Sort thresholds ---
+    sort_boost_threshold = ROBSCALE_SORT_BOOST_THRESHOLD;  // 512, not cache-sensitive
 
-    sn_parallel_threshold = parallel_thresh;
-    qn_parallel_threshold = parallel_thresh;
+    // sort_tbb: go parallel when data exceeds per-core L2
+    // Each element is 8 bytes (double), sorting needs ~2x workspace
+    sort_tbb_threshold = (std::max)(size_t(4096), per_core_l2 / (sizeof(double) * 2));
+
+    // --- Parallel thresholds ---
+    // Qn: inner loop does binary searches + writes to bounds arrays (3 arrays)
+    qn_parallel_threshold = (std::max)(size_t(4096),
+        per_core_l2 / (sizeof(double) + 2 * sizeof(int32_t)));
+
+    // Sn: inner loop accesses sorted_x + writes inner_medians (2 arrays)
+    sn_parallel_threshold = (std::max)(size_t(4096),
+        per_core_l2 / (sizeof(double) * 2));
+
+    // --- Adaptive median-selection thresholds ---
+    // Below threshold: FR-based selection wins (lower overhead at medium n).
+    // Above threshold: pdqselect wins (better cache locality at large n).
+    //
+    // Divisor encodes the working-set pressure during selection:
+    //   divisor=5: MAD/IQR (2 arrays + constants, empirically tuned)
+    //   divisor=2: robScale median/MAD (1–2 warm arrays, lighter pressure)
+    //   divisor=2: Sn lowmedian (1 active + 1 residual sorted_x)
+    //   divisor=4: Qn final diff-window (1 active + sorted_x/work/bounds warm)
+    pdq_median_threshold    = (std::max)(size_t(2048), per_core_l2 / (sizeof(double) * 5));
+    pdq_robscale_threshold  = (std::max)(size_t(2048), per_core_l2 / (sizeof(double) * 2));
+    pdq_lowmedian_threshold = (std::max)(size_t(2048), per_core_l2 / (sizeof(double) * 2));
+    pdq_qn_final_threshold  = (std::max)(size_t(2048), per_core_l2 / (sizeof(double) * 4));
+
+    // --- Grain size ---
+    // Each grain block should fit in per-core L2
+    // Workers access ~4 arrays of grain_size elements
+    grain_size = (std::max)(size_t(512), per_core_l2 / (sizeof(double) * 4));
+    // Cap at 8192 to ensure enough tasks for load balancing
+    grain_size = (std::min)(grain_size, size_t(8192));
+
+    // --- Fixed thresholds (not cache-sensitive) ---
+    qn_exact_threshold = ROBSCALE_QN_EXACT_THRESHOLD;
+    sn_stack_threshold = ROBSCALE_SN_STACK_THRESHOLD;
   }
 };
 

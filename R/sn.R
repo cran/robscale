@@ -6,8 +6,13 @@
 #' @param constant Consistency constant. Default is \eqn{1.1926}.
 #' @param finite.corr Logical; if \code{TRUE}, a finite-sample correction factor is applied.
 #' @param na.rm Logical; if \code{TRUE}, \code{NA} values are removed before computation.
+#' @param ci Logical. If \code{TRUE}, return a \code{"robscale_ci"} object
+#'   with the point estimate and asymptotic confidence interval.
+#'   Default: \code{FALSE}.
+#' @param level Confidence level for the interval (default 0.95).
 #'
-#' @return The \eqn{S_n} estimator of scale.
+#' @return If \code{ci = FALSE} (default), the \eqn{S_n} estimator of scale
+#'   (a scalar). If \code{ci = TRUE}, an object of class \code{"robscale_ci"}.
 #'
 #' @details
 #' The \eqn{S_n} estimator is defined as the median of medians:
@@ -29,10 +34,13 @@
 #' The execution strategy is tiered for maximum efficiency:
 #' \itemize{
 #'   \item \bold{Optimal sorting networks} are used for the target regime of
-#'     very small samples (\eqn{n \le 8}). These networks minimize control
+#'     very small samples (\eqn{n \le 16}). These networks minimize control
 #'     flow overhead and maximize pipeline utilization.
 #'   \item \bold{Highly tuned kernels} are employed for general datasets,
 #'     leveraging C++17 features for cache-aware computation.
+#'   \item \bold{Cache-aware parallelization} via Intel TBB (Threading Building
+#'     Blocks) for large-scale data, with thresholds derived from the detected
+#'     per-core L2 cache size.
 #' }
 #'
 #' @references
@@ -40,36 +48,50 @@
 #' \emph{Journal of the American Statistical Association}, \bold{88}(424), 1273--1283.
 #' \doi{10.1080/01621459.1993.10476408}
 #'
+#' Akinshin, A. (2022). Finite-sample Rousseeuw-Croux scale estimators.
+#' \emph{arXiv preprint arXiv:2209.12268}.
+#'
+#' @seealso \code{\link{qn}} for the \eqn{Q_n} scale estimator;
+#'   \code{\link{robScale}} for the M-estimator of scale;
+#'   \code{\link{adm}} for the average distance to median.
+#'
 #' @examples
 #' sn(c(1:9))
 #' x <- c(1, 2, 3, 5, 7, 8)
 #' sn(x)
 #'
+#' # Asymptotic confidence interval
+#' sn(x, ci = TRUE)
+#'
 #' @export
-sn <- function(x, constant = 1.1926, finite.corr = TRUE, na.rm = FALSE) {
+sn <- function(x, constant = 1.1926, finite.corr = TRUE, na.rm = FALSE,
+               ci = FALSE, level = 0.95) {
   if (na.rm) x <- x[!is.na(x)]
   n <- length(x)
   if (n < 2) return(NA_real_)
-  
+
+  fast <- !ci && identical(constant, 1.1926) && finite.corr
+
   if (is.double(x)) {
-    if (identical(constant, 1.1926) && finite.corr) return(.Call(`_robscale_C_sn_fast`, x))
+    if (fast) return(.Call(`_robscale_C_sn_fast`, x))
     res <- .Call(`_robscale_C_sn_fast`, x)
   } else if (is.integer(x)) {
-    if (identical(constant, 1.1926) && finite.corr) return(.Call(`_robscale_C_sn_int_fast`, x))
+    if (fast) return(.Call(`_robscale_C_sn_int_fast`, x))
     res <- .Call(`_robscale_C_sn_int_fast`, x)
   } else {
     x <- as.double(x)
-    if (identical(constant, 1.1926) && finite.corr) return(.Call(`_robscale_C_sn_fast`, x))
+    if (fast) return(.Call(`_robscale_C_sn_fast`, x))
     res <- .Call(`_robscale_C_sn_fast`, x)
   }
-  
+
   if (!identical(constant, 1.1926)) {
     res <- res * (constant / 1.19259855312321)
   }
-  
+
   if (!finite.corr) {
     res <- res / .Call(`_robscale_C_get_sn_factor`, n)
   }
-  
+
+  if (ci) return(.analytical_ci(res, n, are = 0.58, level, "sn"))
   res
 }

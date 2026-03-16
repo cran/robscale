@@ -8,10 +8,12 @@ robScale(
   x,
   loc = NULL,
   fallback = c("adm", "na"),
-  implbound = 0.0001,
+  implbound = 1e-04,
   na.rm = FALSE,
   maxit = 80L,
-  tol = sqrt(.Machine$double.eps)
+  tol = sqrt(.Machine$double.eps),
+  ci = FALSE,
+  level = 0.95
 )
 }
 \arguments{
@@ -38,12 +40,19 @@ Defaults to 80.}
 \item{tol}{Convergence tolerance. Iteration stops when the relative
 change in the scale estimate falls below \code{tol}. Defaults to
 \code{sqrt(.Machine$double.eps)}.}
+
+\item{ci}{Logical. If \code{TRUE}, return a \code{"robscale_ci"} object
+with the point estimate and asymptotic confidence interval.
+Default: \code{FALSE}.}
+
+\item{level}{Confidence level for the interval (default 0.95).}
 }
 \value{
-A single numeric value: the robust M-estimate of scale.
-  Returns \code{NA} if \code{x} has length zero (after removal of
-  \code{NA}s when \code{na.rm = TRUE}) or if the MAD collapses and
-  \code{fallback = "na"}.
+If \code{ci = FALSE} (default), a single numeric value: the robust
+  M-estimate of scale. Returns \code{NA} if \code{x} has length zero (after
+  removal of \code{NA}s when \code{na.rm = TRUE}) or if the MAD collapses
+  and \code{fallback = "na"}.
+  If \code{ci = TRUE}, an object of class \code{"robscale_ci"}.
 }
 \description{
 Computes the robust M-estimate of scale for very small samples using the
@@ -69,7 +78,7 @@ This estimator is designed for high robustness and efficiency. It achieves a
 \bold{50\% breakdown point}, meaning the estimate remains reliable even if
 half the sample is contaminated by outliers. At the Gaussian distribution,
 the logistic M-estimator of scale achieves an \bold{asymptotic relative
-efficiency (ARE) of 0.76} compared to the sample standard deviation.
+efficiency (ARE) of 0.55} compared to the sample standard deviation.
 
 \strong{Numerical Computation.}
 The estimating equation is solved by multiplicative iteration (Rousseeuw &
@@ -124,6 +133,9 @@ c(sd(x_clean), sd(x_dirty))               # destroyed
 
 # MAD implosion: identical values cause MAD = 0
 robScale(c(5, 5, 5, 5, 6))     # falls back to adm()
+
+# Asymptotic confidence interval
+robScale(x, ci = TRUE)
 
 }
 \references{
