@@ -60,22 +60,21 @@
 #'
 #' @keywords univar robust
 #' @export
-mad_scaled <- function(x, center, constant = 1.482602218505602, na.rm = FALSE,
+mad_scaled <- function(x, center = NULL, constant = 1.482602218505602, na.rm = FALSE,
                        ci = FALSE, level = 0.95) {
-  if (na.rm) {
-    x <- x[!is.na(x)]
-  } else {
-    if (anyNA(x)) {
-      stop("There are NAs in the data yet na.rm is FALSE")
-    }
-  }
+  if (!is.numeric(x)) stop("'x' must be a numeric vector")
+  if (na.rm) x <- x[!is.na(x)]
   n <- length(x)
   if (n == 0L) return(NA_real_)
-  if (missing(center)) {
-    res <- mad_impl_auto(x, constant)
-  } else {
-    res <- mad_impl_center(x, center, constant)
+  if (ci) {
+    if (!is.numeric(level) || length(level) != 1L || level <= 0 || level >= 1)
+      stop("'level' must be a single numeric value in (0, 1)")
   }
-  if (ci) return(.analytical_ci(res, n, are = 0.368, level, "mad_scaled"))
+  if (is.null(center)) {
+    res <- .Call(`_robscale_mad_impl_auto`, x, constant)
+  } else {
+    res <- .Call(`_robscale_mad_impl_center`, x, center, constant)
+  }
+  if (ci) return(.analytical_ci(res, n, are = .are_values[["mad_scaled"]], level, "mad_scaled"))
   res
 }

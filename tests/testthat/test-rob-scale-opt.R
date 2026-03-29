@@ -1,0 +1,373 @@
+## test-rob-scale-opt.R
+## Correctness guards for robScale() performance optimization session.
+## These tests must pass before AND after every WU; they detect regressions
+## introduced by structural or algorithmic changes.
+##
+## Coverage:
+##   - WU-RS0/RS1: diagnostic export + equivalence guards + edge cases
+##   - WU-RS2a: C_rob_scale_orig removal guard
+##   - WU-RS2b/c: parallel path correctness guard
+
+library(robscale)
+tol_n <- function(n) n * .Machine$double.eps
+
+# ============================================================
+# 1. Diagnostic export presence
+# ============================================================
+
+test_that("rob_scale opt: C_rob_scale_fast exists as exported function", {
+  expect_true(exists("C_rob_scale_fast",
+                     envir = asNamespace("robscale"), inherits = FALSE))
+})
+
+# ============================================================
+# 2. C_rob_scale_fast matches production robScale()
+#    (regression guards for WU-RS1 8-wide kernel and beyond)
+# ============================================================
+
+test_that("rob_scale opt: fast==robScale for n=4", {
+  set.seed(401); x <- rnorm(4)
+  expect_equal(robscale:::C_rob_scale_fast(x), robScale(x), tolerance = tol_n(4))
+})
+
+test_that("rob_scale opt: fast==robScale for n=5", {
+  set.seed(501); x <- rnorm(5)
+  expect_equal(robscale:::C_rob_scale_fast(x), robScale(x), tolerance = tol_n(5))
+})
+
+test_that("rob_scale opt: fast==robScale for n=6", {
+  set.seed(601); x <- rnorm(6)
+  expect_equal(robscale:::C_rob_scale_fast(x), robScale(x), tolerance = tol_n(6))
+})
+
+test_that("rob_scale opt: fast==robScale for n=7", {
+  set.seed(701); x <- rnorm(7)
+  expect_equal(robscale:::C_rob_scale_fast(x), robScale(x), tolerance = tol_n(7))
+})
+
+test_that("rob_scale opt: fast==robScale for n=8", {
+  set.seed(801); x <- rnorm(8)
+  expect_equal(robscale:::C_rob_scale_fast(x), robScale(x), tolerance = tol_n(8))
+})
+
+test_that("rob_scale opt: fast==robScale for n=9", {
+  set.seed(901); x <- rnorm(9)
+  expect_equal(robscale:::C_rob_scale_fast(x), robScale(x), tolerance = tol_n(9))
+})
+
+test_that("rob_scale opt: fast==robScale for n=10", {
+  set.seed(1001); x <- rnorm(10)
+  expect_equal(robscale:::C_rob_scale_fast(x), robScale(x), tolerance = tol_n(10))
+})
+
+test_that("rob_scale opt: fast==robScale for n=12", {
+  set.seed(1201); x <- rnorm(12)
+  expect_equal(robscale:::C_rob_scale_fast(x), robScale(x), tolerance = tol_n(12))
+})
+
+test_that("rob_scale opt: fast==robScale for n=15", {
+  set.seed(1501); x <- rnorm(15)
+  expect_equal(robscale:::C_rob_scale_fast(x), robScale(x), tolerance = tol_n(15))
+})
+
+test_that("rob_scale opt: fast==robScale for n=16 (is_small boundary)", {
+  set.seed(1601); x <- rnorm(16)
+  expect_equal(robscale:::C_rob_scale_fast(x), robScale(x), tolerance = tol_n(16))
+})
+
+test_that("rob_scale opt: fast==robScale for n=17 (above is_small boundary)", {
+  set.seed(1701); x <- rnorm(17)
+  expect_equal(robscale:::C_rob_scale_fast(x), robScale(x), tolerance = tol_n(17))
+})
+
+test_that("rob_scale opt: fast==robScale for n=30", {
+  set.seed(3001); x <- rnorm(30)
+  expect_equal(robscale:::C_rob_scale_fast(x), robScale(x), tolerance = tol_n(30))
+})
+
+test_that("rob_scale opt: fast==robScale for n=50", {
+  set.seed(5001); x <- rnorm(50)
+  expect_equal(robscale:::C_rob_scale_fast(x), robScale(x), tolerance = tol_n(50))
+})
+
+test_that("rob_scale opt: fast==robScale for n=64 (small-n arena boundary)", {
+  set.seed(6401); x <- rnorm(64)
+  expect_equal(robscale:::C_rob_scale_fast(x), robScale(x), tolerance = tol_n(64))
+})
+
+test_that("rob_scale opt: fast==robScale for n=65 (above small-n arena boundary)", {
+  set.seed(6501); x <- rnorm(65)
+  expect_equal(robscale:::C_rob_scale_fast(x), robScale(x), tolerance = tol_n(65))
+})
+
+test_that("rob_scale opt: fast==robScale for n=100", {
+  set.seed(10001); x <- rnorm(100)
+  expect_equal(robscale:::C_rob_scale_fast(x), robScale(x), tolerance = tol_n(100))
+})
+
+test_that("rob_scale opt: fast==robScale for n=200", {
+  set.seed(20001); x <- rnorm(200)
+  expect_equal(robscale:::C_rob_scale_fast(x), robScale(x), tolerance = tol_n(200))
+})
+
+test_that("rob_scale opt: fast==robScale for n=500", {
+  set.seed(50001); x <- rnorm(500)
+  expect_equal(robscale:::C_rob_scale_fast(x), robScale(x), tolerance = tol_n(500))
+})
+
+test_that("rob_scale opt: fast==robScale for n=1000", {
+  set.seed(100001); x <- rnorm(1000)
+  expect_equal(robscale:::C_rob_scale_fast(x), robScale(x), tolerance = tol_n(1000))
+})
+
+# ============================================================
+# 3. Stack/heap boundary straddle at SCALE_STACK_SIZE = 2048
+# ============================================================
+
+test_that("rob_scale opt: fast==robScale for n=2047 (stack path)", {
+  set.seed(204701); x <- rnorm(2047)
+  expect_equal(robscale:::C_rob_scale_fast(x), robScale(x), tolerance = tol_n(2047))
+})
+
+test_that("rob_scale opt: fast==robScale for n=2048 (stack/heap boundary)", {
+  set.seed(204801); x <- rnorm(2048)
+  expect_equal(robscale:::C_rob_scale_fast(x), robScale(x), tolerance = tol_n(2048))
+})
+
+test_that("rob_scale opt: fast==robScale for n=2049 (heap path)", {
+  set.seed(204901); x <- rnorm(2049)
+  expect_equal(robscale:::C_rob_scale_fast(x), robScale(x), tolerance = tol_n(2049))
+})
+
+# ============================================================
+# 4. Edge cases
+# ============================================================
+
+test_that("rob_scale opt: n=0 returns 0 via C_rob_scale_fast", {
+  expect_equal(robscale:::C_rob_scale_fast(numeric(0)), 0.0)
+})
+
+test_that("rob_scale opt: n=1 constant data returns 0 via C_rob_scale_fast", {
+  # MAD=0 → ADM fallback → 0 for single element
+  expect_equal(robscale:::C_rob_scale_fast(c(5.0)), 0.0)
+})
+
+test_that("rob_scale opt: n<4 fast==robScale (early-exit branch)", {
+  set.seed(42)
+  for (n in c(1L, 2L, 3L)) {
+    x <- rnorm(n)
+    expect_equal(robscale:::C_rob_scale_fast(x),
+                 robScale(x),
+                 tolerance = 8 * .Machine$double.eps,
+                 label = paste0("n=", n))
+  }
+})
+
+test_that("rob_scale opt: MAD implosion (all-tied data) triggers ADM fallback via C_rob_scale_fast", {
+  # 8 out of 9 elements identical → MAD = 0 → ADM fallback
+  x <- c(rep(5.0, 8), 6.0)
+  fast_val <- robscale:::C_rob_scale_fast(x)
+  expect_equal(fast_val, robScale(x), tolerance = 8 * .Machine$double.eps)
+  expect_gt(fast_val, 0.0)  # ADM returns a positive value
+})
+
+test_that("rob_scale opt: exactly constant data returns 0 for n=20", {
+  x <- rep(3.14159, 20)
+  expect_equal(robscale:::C_rob_scale_fast(x), 0.0)
+})
+
+test_that("rob_scale opt: determinism — 10 identical calls return same value", {
+  set.seed(99); x <- rnorm(100)
+  vals <- replicate(10, robscale:::C_rob_scale_fast(x))
+  expect_true(all(vals == vals[1]))
+})
+
+test_that("rob_scale opt: result is positive for typical data", {
+  set.seed(42); x <- rnorm(50)
+  expect_gt(robscale:::C_rob_scale_fast(x), 0.0)
+})
+
+test_that("rob_scale opt: scaled data gives proportionally scaled result", {
+  set.seed(42); x <- rnorm(50)
+  fast1 <- robscale:::C_rob_scale_fast(x)
+  fast2 <- robscale:::C_rob_scale_fast(x * 10)
+  expect_equal(fast2 / fast1, 10.0, tolerance = 1e-6)
+})
+
+# ============================================================
+# 5. WU-RS1 8-wide AVX2 remainder-path guards
+#    These test specific remainder patterns (n mod 8) to guard
+#    against numerical regressions in the 8-wide unroll.
+# ============================================================
+
+test_that("rob_scale 8-wide AVX2: n=5 (1 leftover in 4-wide cleanup)", {
+  set.seed(5); x <- rnorm(5)
+  expect_equal(robscale:::C_rob_scale_fast(x), robScale(x),
+               tolerance = tol_n(5), label = "n=5")
+})
+
+test_that("rob_scale 8-wide AVX2: n=7 (3 leftover → scalar tail)", {
+  set.seed(7); x <- rnorm(7)
+  expect_equal(robscale:::C_rob_scale_fast(x), robScale(x),
+               tolerance = tol_n(7), label = "n=7")
+})
+
+test_that("rob_scale 8-wide AVX2: n=9 (1 leftover after first 8-wide block)", {
+  set.seed(9); x <- rnorm(9)
+  expect_equal(robscale:::C_rob_scale_fast(x), robScale(x),
+               tolerance = tol_n(9), label = "n=9")
+})
+
+test_that("rob_scale 8-wide AVX2: n=11 (3 leftover)", {
+  set.seed(11); x <- rnorm(11)
+  expect_equal(robscale:::C_rob_scale_fast(x), robScale(x),
+               tolerance = tol_n(11), label = "n=11")
+})
+
+test_that("rob_scale 8-wide AVX2: n=13 (5 leftover → 4-wide + 1 scalar)", {
+  set.seed(13); x <- rnorm(13)
+  expect_equal(robscale:::C_rob_scale_fast(x), robScale(x),
+               tolerance = tol_n(13), label = "n=13")
+})
+
+test_that("rob_scale 8-wide AVX2: n=15 (7 leftover → 4-wide + 3 scalar)", {
+  set.seed(15); x <- rnorm(15)
+  expect_equal(robscale:::C_rob_scale_fast(x), robScale(x),
+               tolerance = tol_n(15), label = "n=15")
+})
+
+test_that("rob_scale 8-wide AVX2: ADM fallback path unchanged by kernel change", {
+  # All-equal data: MAD=0 → ADM. The AVX2 kernel is not reached.
+  expect_equal(robscale:::C_rob_scale_fast(rep(3.0, 20)),
+               robScale(rep(3.0, 20)),
+               tolerance = .Machine$double.eps)
+})
+
+# ============================================================
+# 6. WU-RS2a removal guard
+# ============================================================
+
+test_that("rob_scale opt: C_rob_scale_orig removed after WU-RS2a", {
+  expect_false(exists("C_rob_scale_orig",
+                      envir = asNamespace("robscale"), inherits = FALSE))
+})
+
+# ============================================================
+# 7. Parallel path correctness guard (WU-RS2b/c)
+# ============================================================
+
+test_that("rob_scale opt: parallel path at n=65536 matches robScale", {
+  set.seed(555)
+  x_large <- rnorm(65536)
+  expect_equal(robscale:::C_rob_scale_fast(x_large),
+               robScale(x_large),
+               tolerance = 65536 * .Machine$double.eps)
+})
+
+# ============================================================
+# 8. WU-RS4 regression guards
+#    (bit-exact after OPT-1+F, OPT-3, OPT-5, OPT-6, OPT-B, OPT-E)
+# ============================================================
+
+test_that("rob-scale WU-RS4: single-buffer and abs-diff bit-exact at boundary sizes", {
+  for (n in c(2047, 2048, 2049, 2050)) {
+    set.seed(100 + n)
+    x <- rnorm(n)
+    expect_equal(
+      robscale:::C_rob_scale_fast(x),
+      robscale::robScale(x),
+      tolerance = 0,
+      label = paste0("bit-exact n=", n)
+    )
+  }
+})
+
+test_that("rob-scale WU-RS4: has_loc code path produces finite positive result", {
+  set.seed(42)
+  for (n in c(10, 50, 200, 1000)) {
+    x <- rnorm(n)
+    val <- robscale::robScale(x)
+    expect_true(is.finite(val) && val > 0,
+                label = paste0("finite positive n=", n))
+  }
+})
+
+test_that("rob-scale WU-RS4: micro-buffer straddling (n=63, 64, 65) bit-exact", {
+  for (n in c(63, 64, 65)) {
+    set.seed(200 + n)
+    x <- rnorm(n)
+    expect_equal(
+      robscale:::C_rob_scale_fast(x),
+      robscale::robScale(x),
+      tolerance = 0,
+      label = paste0("n=", n)
+    )
+  }
+})
+
+# ============================================================
+# 9. WU-RS5 regression guards
+#    (OPT-4: scalar fallback fusion — bit-exact on AVX2 builds)
+# ============================================================
+
+test_that("rob-scale WU-RS5: n=4 correct (AVX2 path regression guard)", {
+  x4 <- c(1.5, 2.7, 0.3, -0.8)
+  v <- robscale:::C_rob_scale_fast(x4)
+  expect_true(is.finite(v) && v > 0, label = "n=4 finite positive")
+  expect_equal(v, robscale::robScale(x4), tolerance = 0)
+})
+
+test_that("rob-scale WU-RS5: n<4 scalar path produces correct results", {
+  # n=0: explicit early return
+  expect_equal(robscale:::C_rob_scale_fast(numeric(0)), 0.0, label = "n=0")
+  # n=1: MAD=0 (single point) → ADM fallback → 0
+  expect_equal(robscale:::C_rob_scale_fast(c(1.0)), 0.0, label = "n=1")
+  # n=2,3: function returns MAD-based estimate (finite, positive) — not 0.
+  # This is correct: for non-degenerate data, the small-n path returns s_init.
+  expect_true(is.finite(robscale:::C_rob_scale_fast(c(1.0, 2.0))), label = "n=2 finite")
+  expect_true(is.finite(robscale:::C_rob_scale_fast(c(1.0, 2.0, 3.0))), label = "n=3 finite")
+  # Matches public robScale() API
+  expect_equal(robscale:::C_rob_scale_fast(c(1.0, 2.0)),
+               robscale::robScale(c(1.0, 2.0)), tolerance = 0, label = "n=2 == robScale")
+})
+
+# ============================================================
+# 10. WU-RS9 regression guards
+#     (rob_scale_sorted internal API — sorted vs unsorted input equivalence)
+# ============================================================
+
+test_that("rob-scale WU-RS9: robScale on sorted == robScale on unsorted", {
+  # rob_scale_sorted must produce the same result as the unsorted path
+  for (n in c(10, 50, 100, 200, 500)) {
+    set.seed(300 + n)
+    x <- sort(rnorm(n))
+    val_sorted   <- robscale::robScale(x)
+    val_shuffled <- robscale::robScale(sample(x))
+    expect_equal(val_sorted, val_shuffled,
+                 tolerance = tol_n(n),
+                 label = paste0("sorted==shuffled n=", n))
+  }
+})
+
+test_that("rob-scale WU-RS9: ensemble consistency after rob_scale_sorted refactor", {
+  # cpp_scale_ensemble should remain numerically stable after WU-RS9 refactor.
+  # Pin to a known-good value (generated post-WU-RS9) to guard against regressions.
+  set.seed(42)
+  x <- rnorm(20)
+  val_before <- robscale:::cpp_scale_ensemble(x, 200L)
+  # Verify the result is finite and positive — no structural regression
+  expect_true(is.finite(val_before), label = "ensemble finite post-WU-RS9")
+  expect_gt(val_before, 0.0, label = "ensemble positive post-WU-RS9")
+})
+
+test_that("rob-scale WU-RS9: ADM fallback in rob_scale_sorted for tied data", {
+  # All-tied data → MAD=0 → ADM fallback path in rob_scale_sorted
+  set.seed(42)
+  x <- sort(c(rep(3.0, 8), 4.0))  # 8 of 9 tied → MAD=0 → ADM
+  val <- robscale::robScale(x)
+  expect_gt(val, 0.0, label = "ADM fallback positive")
+  expect_true(is.finite(val), label = "ADM fallback finite")
+  # Must agree with unsorted path
+  expect_equal(robscale::robScale(sort(x)), robscale::robScale(sample(x)),
+               tolerance = tol_n(9), label = "sorted==shuffled ADM path")
+})

@@ -3,7 +3,7 @@
 #' Computes the robust estimator of scale \eqn{Q_n} proposed by Rousseeuw and Croux (1993).
 #'
 #' @param x A numeric vector of observations.
-#' @param constant Consistency constant. Default is \eqn{2.2191}.
+#' @param constant Consistency constant. Default is \eqn{2.2191} (full precision: 2.21914446598508).
 #' @param finite.corr Logical; if \code{TRUE}, a finite-sample correction factor is applied.
 #' @param na.rm Logical; if \code{TRUE}, \code{NA} values are removed before computation.
 #' @param ci Logical. If \code{TRUE}, return a \code{"robscale_ci"} object
@@ -32,13 +32,13 @@
 #' \strong{Computational Performance.}
 #' While the naive calculation of \eqn{Q_n} requires \eqn{O(n^2)} space and
 #' time, this implementation employs a specialized \eqn{O(n \log n)} algorithm.
-#' The package utilizes a tiered execution strategy:
+#' The implementation uses a tiered execution strategy:
 #' \itemize{
 #'   \item \bold{Optimal sorting networks} for very small samples (\eqn{n \le 16}).
 #'     These networks eliminate branch misprediction in the target regimes of
 #'     extremely small samples.
-#'   \item A specialized \bold{Johnson--Mizoguchi selection} algorithm for
-#'     medium-sized datasets.
+#'   \item A \bold{Croux--Rousseeuw weighted-median refinement} algorithm
+#'     for medium and large datasets.
 #'   \item \bold{Cache-aware parallelization} via Intel TBB (Threading Building
 #'     Blocks) for large-scale data, with thresholds derived from the detected
 #'     per-core L2 cache size.
@@ -65,27 +65,25 @@
 #' qn(x, ci = TRUE)
 #'
 #' @export
-qn <- function(x, constant = 2.2191, finite.corr = TRUE, na.rm = FALSE,
+qn <- function(x, constant = 2.21914446598508, finite.corr = TRUE, na.rm = FALSE,
                ci = FALSE, level = 0.95) {
+  if (!is.numeric(x)) stop("'x' must be a numeric vector")
   if (na.rm) x <- x[!is.na(x)]
   n <- length(x)
   if (n < 2) return(NA_real_)
 
-  fast <- !ci && identical(constant, 2.2191) && finite.corr
-
-  if (is.double(x)) {
-    if (fast) return(.Call(`_robscale_C_qn_fast`, x))
-    res <- .Call(`_robscale_C_qn_fast`, x)
-  } else if (is.integer(x)) {
-    if (fast) return(.Call(`_robscale_C_qn_int_fast`, x))
-    res <- .Call(`_robscale_C_qn_int_fast`, x)
-  } else {
-    x <- as.double(x)
-    if (fast) return(.Call(`_robscale_C_qn_fast`, x))
-    res <- .Call(`_robscale_C_qn_fast`, x)
+  if (ci) {
+    if (!is.numeric(level) || length(level) != 1L || level <= 0 || level >= 1)
+      stop("'level' must be a single numeric value in (0, 1)")
   }
 
-  if (!identical(constant, 2.2191)) {
+  fast <- !ci && constant == 2.21914446598508 && finite.corr
+
+  res <- if (is.double(x)) .Call(`_robscale_C_qn_fast`, x)
+         else .Call(`_robscale_C_qn_int_fast`, x)
+  if (fast) return(res)
+
+  if (constant != 2.21914446598508) {
     res <- res * (constant / 2.21914446598508)
   }
 
@@ -93,6 +91,6 @@ qn <- function(x, constant = 2.2191, finite.corr = TRUE, na.rm = FALSE,
     res <- res / .Call(`_robscale_C_get_qn_factor`, n)
   }
 
-  if (ci) return(.analytical_ci(res, n, are = 0.82, level, "qn"))
+  if (ci) return(.analytical_ci(res, n, are = .are_values[["qn"]], level, "qn"))
   res
 }

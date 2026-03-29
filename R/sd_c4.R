@@ -55,16 +55,15 @@
 #' @keywords univar
 #' @export
 sd_c4 <- function(x, na.rm = FALSE, ci = FALSE, level = 0.95) {
-  if (na.rm) {
-    x <- x[!is.na(x)]
-  } else {
-    if (anyNA(x)) {
-      stop("There are NAs in the data yet na.rm is FALSE")
-    }
-  }
+  if (!is.numeric(x)) stop("'x' must be a numeric vector")
+  if (na.rm) x <- x[!is.na(x)]
   n <- length(x)
-  if (n == 0L) return(NA_real_)
-  res <- sd_c4_impl(x)
+  if (n < 2L) return(NA_real_)
+  if (ci) {
+    if (!is.numeric(level) || length(level) != 1L || level <= 0 || level >= 1)
+      stop("'level' must be a single numeric value in (0, 1)")
+  }
+  res <- .Call(`_robscale_sd_c4_impl`, x)
   if (ci) return(.chisq_ci(res, n, level))
   res
 }

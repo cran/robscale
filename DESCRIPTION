@@ -1,7 +1,7 @@
 Package: robscale
 Type: Package
 Title: Accelerated Estimation of Robust Location and Scale
-Version: 0.2.1
+Version: 0.5.3
 Authors@R: c(person(given = "Dennis Alexis Valin", family = "Dittrich",
     role = c("aut", "cre", "cph"), email = "davd@economicscience.net",
     comment = c(ORCID = "0000-0002-4438-8276")))
@@ -9,13 +9,14 @@ Description: Estimates robust location and scale parameters using
     platform-specific Single Instruction, Multiple Data (SIMD) vectorization
     and Intel Threading Building Blocks (TBB) for parallel processing.
     Implements a novel variance-weighted ensemble estimator that adaptively
-    combines all available statistics. Included methods feature logistic
-    M-estimators, the estimators of Rousseeuw and Croux (1993), the Gini 
+    combines all available statistics. Methods include logistic
+    M-estimators, the estimators of Rousseeuw and Croux (1993), the Gini
     mean difference, the scaled Median Absolute Deviation (MAD), the scaled
-    Interquartile Range (IQR), and unbiased standard deviations. Achieves 
-    substantial speedups over existing implementations through an 'Rcpp' 
-    backend and a unified dispatcher that automatically selects the optimal
-    estimator based on sample size.
+    Interquartile Range (IQR), and unbiased standard deviations. Achieves
+    substantial speedups over existing implementations through an 'Rcpp'
+    backend with fused single-buffer algorithms that halve memory traffic
+    for MAD and M-scale estimation, and a unified dispatcher that
+    automatically selects the optimal estimator based on sample size.
 License: MIT + file LICENSE
 URL: https://github.com/davdittrich/robscale,
         https://doi.org/10.5281/zenodo.18828607
@@ -23,15 +24,17 @@ BugReports: https://github.com/davdittrich/robscale/issues
 Encoding: UTF-8
 Imports: Rcpp (>= 1.0.0), RcppParallel (>= 5.0.0)
 LinkingTo: Rcpp, RcppParallel, BH
-Suggests: collapse, GiniDistance, Hmisc, revss, robustbase, testthat
-        (>= 3.0.0)
+Suggests: collapse, devtools, GiniDistance, Hmisc, knitr, revss,
+        rmarkdown, robustbase, testthat (>= 3.0.0)
+VignetteBuilder: knitr
 SystemRequirements: GNU make, TBB
 Config/testthat/edition: 3
 NeedsCompilation: yes
 RoxygenNote: 7.3.3
-Packaged: 2026-03-16 17:22:04 UTC; dd
+Packaged: 2026-03-29 09:11:38 UTC; dd
 Author: Dennis Alexis Valin Dittrich [aut, cre, cph] (ORCID:
     <https://orcid.org/0000-0002-4438-8276>)
 Maintainer: Dennis Alexis Valin Dittrich <davd@economicscience.net>
+Depends: R (>= 3.5.0)
 Repository: CRAN
-Date/Publication: 2026-03-16 19:30:10 UTC
+Date/Publication: 2026-03-29 09:50:02 UTC

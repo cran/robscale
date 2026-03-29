@@ -48,7 +48,7 @@ The default constant \eqn{C = \sqrt{\pi}/2}{C = sqrt(pi)/2} ensures that the
 GMD is a consistent estimator of \eqn{\sigma} under the Gaussian model. The
 GMD achieves an \bold{asymptotic relative efficiency (ARE) of 0.98} compared
 to the sample standard deviation, making it the most efficient robust
-alternative in this package. Its breakdown point is approximately 29.3\%.
+alternative in this package. Its breakdown point is \eqn{1 - 1/\sqrt{2}}{1 - 1/sqrt(2)}, approximately 29.3\%.
 }
 \examples{
 gmd(c(1:9))

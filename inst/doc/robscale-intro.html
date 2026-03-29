@@ -1,0 +1,1259 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+
+
+<title>Introduction to robscale</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+<style type="text/css">
+
+div.csl-bib-body { }
+div.csl-entry {
+clear: both;
+margin-bottom: 0em;
+}
+.hanging div.csl-entry {
+margin-left:2em;
+text-indent:-2em;
+}
+div.csl-left-margin {
+min-width:2em;
+float:left;
+}
+div.csl-right-inline {
+margin-left:2em;
+padding-left:1em;
+}
+div.csl-indent {
+margin-left: 2em;
+}
+</style>
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Introduction to robscale</h1>
+
+
+
+<div id="the-robustness-problem" class="section level2">
+<h2>1. The Robustness Problem</h2>
+<p>Outliers compromise the reliability of classical estimators even in
+moderate samples. A single recording error can destroy the standard
+deviation, yet the standard deviation remains the default scale
+estimator in most statistical software.</p>
+<p>To see why, consider a small sample with one gross error:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">library</span>(robscale)</span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a>x_clean <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="fl">2.1</span>, <span class="fl">2.3</span>, <span class="fl">2.0</span>, <span class="fl">2.4</span>, <span class="fl">2.2</span>, <span class="fl">2.1</span>, <span class="fl">2.3</span>, <span class="fl">1.9</span>)</span>
+<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a>x_contaminated <span class="ot">&lt;-</span> <span class="fu">c</span>(x_clean, <span class="dv">200</span>)   <span class="co"># one recording error</span></span>
+<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a><span class="fu">sd</span>(x_clean)</span>
+<span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a><span class="co">#&gt; [1] 0.1685018</span></span>
+<span id="cb1-8"><a href="#cb1-8" tabindex="-1"></a><span class="fu">sd</span>(x_contaminated)   <span class="co"># collapses</span></span>
+<span id="cb1-9"><a href="#cb1-9" tabindex="-1"></a><span class="co">#&gt; [1] 65.94602</span></span>
+<span id="cb1-10"><a href="#cb1-10" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" tabindex="-1"></a><span class="fu">gmd</span>(x_clean)</span>
+<span id="cb1-12"><a href="#cb1-12" tabindex="-1"></a><span class="co">#&gt; [1] 0.1804105</span></span>
+<span id="cb1-13"><a href="#cb1-13" tabindex="-1"></a><span class="fu">gmd</span>(x_contaminated)  <span class="co"># unaffected</span></span>
+<span id="cb1-14"><a href="#cb1-14" tabindex="-1"></a><span class="co">#&gt; [1] 39.1023</span></span>
+<span id="cb1-15"><a href="#cb1-15" tabindex="-1"></a></span>
+<span id="cb1-16"><a href="#cb1-16" tabindex="-1"></a><span class="fu">qn</span>(x_clean)</span>
+<span id="cb1-17"><a href="#cb1-17" tabindex="-1"></a><span class="co">#&gt; [1] 0.1486827</span></span>
+<span id="cb1-18"><a href="#cb1-18" tabindex="-1"></a><span class="fu">qn</span>(x_contaminated)   <span class="co"># unaffected</span></span>
+<span id="cb1-19"><a href="#cb1-19" tabindex="-1"></a><span class="co">#&gt; [1] 0.1938622</span></span></code></pre></div>
+<p>The <strong>breakdown point</strong> is the fraction of contaminated
+observations an estimator tolerates before producing an arbitrarily
+large result. The standard deviation has a 0% breakdown point; a single
+outlier drives it to infinity. The GMD achieves 29.3%; <code>qn</code>
+and <code>sn</code> achieve the maximum 50%.</p>
+<p>The <strong>asymptotic relative efficiency</strong> (ARE) measures
+statistical efficiency relative to the sample standard deviation under
+the Gaussian model <span class="citation">(Bickel and Lehmann
+1976)</span>. High efficiency means fewer observations are needed to
+match the standard deviation’s precision. The tradeoff is inherent:
+higher breakdown point generally costs efficiency.</p>
+<p><code>robscale</code> exposes all major points on this
+robustness–efficiency frontier.</p>
+</div>
+<div id="getting-started" class="section level2">
+<h2>2. Getting Started</h2>
+<div id="installation" class="section level3">
+<h3>Installation</h3>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="fu">install.packages</span>(<span class="st">&quot;robscale&quot;</span>)</span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a><span class="co"># Development version:</span></span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a><span class="co"># install.packages(&quot;remotes&quot;)</span></span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a><span class="co"># remotes::install_github(&quot;davdittrich/robscale&quot;)</span></span></code></pre></div>
+</div>
+<div id="quick-demo" class="section level3">
+<h3>Quick demo</h3>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="fu">library</span>(robscale)</span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">42</span>)</span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="fu">rnorm</span>(<span class="dv">20</span>), <span class="dv">50</span>)   <span class="co"># 20 clean observations + one outlier</span></span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a><span class="fu">scale_robust</span>(x)              <span class="co"># auto-selects best strategy</span></span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a><span class="co">#&gt; [1] 5.391021</span></span>
+<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a><span class="fu">scale_robust</span>(x, <span class="at">ci =</span> <span class="cn">TRUE</span>)   <span class="co"># with confidence interval</span></span>
+<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a><span class="co">#&gt; gmd estimate: 5.3910</span></span>
+<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a><span class="co">#&gt; 95% CI (analytical): [3.7441, 7.0380]</span></span>
+<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a></span>
+<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a><span class="fu">data.frame</span>(</span>
+<span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a>  <span class="at">estimator =</span> <span class="fu">c</span>(<span class="st">&quot;sd&quot;</span>, <span class="st">&quot;sd_c4&quot;</span>, <span class="st">&quot;gmd&quot;</span>, <span class="st">&quot;qn&quot;</span>, <span class="st">&quot;mad_scaled&quot;</span>),</span>
+<span id="cb3-14"><a href="#cb3-14" tabindex="-1"></a>  <span class="at">value =</span> <span class="fu">round</span>(<span class="fu">c</span>(<span class="fu">sd</span>(x), <span class="fu">sd_c4</span>(x), <span class="fu">gmd</span>(x), <span class="fu">qn</span>(x), <span class="fu">mad_scaled</span>(x)), <span class="dv">4</span>)</span>
+<span id="cb3-15"><a href="#cb3-15" tabindex="-1"></a>)</span>
+<span id="cb3-16"><a href="#cb3-16" tabindex="-1"></a><span class="co">#&gt;    estimator   value</span></span>
+<span id="cb3-17"><a href="#cb3-17" tabindex="-1"></a><span class="co">#&gt; 1         sd 10.9441</span></span>
+<span id="cb3-18"><a href="#cb3-18" tabindex="-1"></a><span class="co">#&gt; 2      sd_c4 11.0817</span></span>
+<span id="cb3-19"><a href="#cb3-19" tabindex="-1"></a><span class="co">#&gt; 3        gmd  5.3910</span></span>
+<span id="cb3-20"><a href="#cb3-20" tabindex="-1"></a><span class="co">#&gt; 4         qn  1.4471</span></span>
+<span id="cb3-21"><a href="#cb3-21" tabindex="-1"></a><span class="co">#&gt; 5 mad_scaled  1.3756</span></span></code></pre></div>
+</div>
+</div>
+<div id="the-estimator-spectrum" class="section level2">
+<h2>3. The Estimator Spectrum</h2>
+<p><code>robscale</code> provides 11 exported functions spanning the
+full robustness–efficiency spectrum:</p>
+<table>
+<colgroup>
+<col width="25%" />
+<col width="25%" />
+<col width="25%" />
+<col width="25%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Function</th>
+<th align="right">ARE</th>
+<th align="right">Breakdown</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left"><code>sd_c4(x)</code></td>
+<td align="right">100%</td>
+<td align="right">0%</td>
+<td align="left">Bias-corrected standard deviation</td>
+</tr>
+<tr class="even">
+<td align="left"><code>gmd(x)</code></td>
+<td align="right">98%</td>
+<td align="right">29.3%</td>
+<td align="left">Gini mean difference</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>adm(x)</code></td>
+<td align="right">88.3%</td>
+<td align="right"><span class="math inline">\(1/n\)</span></td>
+<td align="left">Average deviation from median</td>
+</tr>
+<tr class="even">
+<td align="left"><code>qn(x)</code></td>
+<td align="right">82.3%</td>
+<td align="right">50%</td>
+<td align="left">Rousseeuw–Croux <span class="math inline">\(Q_n\)</span></td>
+</tr>
+<tr class="odd">
+<td align="left"><code>sn(x)</code></td>
+<td align="right">58.2%</td>
+<td align="right">50%</td>
+<td align="left">Rousseeuw–Croux <span class="math inline">\(S_n\)</span></td>
+</tr>
+<tr class="even">
+<td align="left"><code>iqr_scaled(x)</code></td>
+<td align="right">37%</td>
+<td align="right">25%</td>
+<td align="left">Scaled interquartile range</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>mad_scaled(x)</code></td>
+<td align="right">36.7%</td>
+<td align="right">50%</td>
+<td align="left">Scaled median absolute deviation</td>
+</tr>
+<tr class="even">
+<td align="left"><code>robScale(x)</code></td>
+<td align="right">~55%</td>
+<td align="right">50%</td>
+<td align="left">M-estimator for scale</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>robLoc(x)</code></td>
+<td align="right">98.4%</td>
+<td align="right">50%</td>
+<td align="left">M-estimator for location</td>
+</tr>
+<tr class="even">
+<td align="left"><code>scale_robust(x)</code></td>
+<td align="right">ensemble</td>
+<td align="right">—</td>
+<td align="left">Variance-weighted dispatcher</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>get_consistency_constant(n)</code></td>
+<td align="right">—</td>
+<td align="right">—</td>
+<td align="left">Finite-sample bias correction factors</td>
+</tr>
+</tbody>
+</table>
+<div id="decision-guide" class="section level3">
+<h3>Decision guide</h3>
+<ul>
+<li><strong>Maximum efficiency, no outliers expected:</strong>
+<code>sd_c4</code></li>
+<li><strong>High efficiency with moderate outlier protection:</strong>
+<code>gmd</code></li>
+<li><strong>Maximum breakdown with good efficiency:</strong>
+<code>qn</code></li>
+<li><strong>Fast computation on large data:</strong>
+<code>mad_scaled</code> or <code>iqr_scaled</code></li>
+<li><strong>Uncertain which estimator to use:</strong>
+<code>scale_robust()</code> (adaptive)</li>
+<li><strong>M-estimate of location:</strong> <code>robLoc</code></li>
+<li><strong>M-estimate of scale:</strong> <code>robScale</code></li>
+</ul>
+</div>
+</div>
+<div id="the-scale_robust-dispatcher" class="section level2">
+<h2>4. The <code>scale_robust()</code> Dispatcher</h2>
+<p><code>scale_robust()</code> adapts its strategy to sample size
+automatically.</p>
+<div id="ensemble-mode-n-20" class="section level3">
+<h3>Ensemble mode (<span class="math inline">\(n &lt; 20\)</span>)</h3>
+<p>For small samples, all 7 scale estimators run on bootstrap
+replicates. Inverse-variance weights—where the variance is the bootstrap
+variance of each estimator across replicates—combine them into a single
+estimate:</p>
+<p><span class="math display">\[
+\hat\sigma = \frac{\sum_{j=1}^{7} \hat\sigma_j(x) \,/\,
+\operatorname{Var}_{\mathrm{boot}}(\hat\sigma_j)}{\sum_{j=1}^{7} 1 \,/\,
+\operatorname{Var}_{\mathrm{boot}}(\hat\sigma_j)}
+\]</span></p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">1</span>)</span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>x_small <span class="ot">&lt;-</span> <span class="fu">rnorm</span>(<span class="dv">12</span>)</span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a><span class="fu">scale_robust</span>(x_small)              <span class="co"># ensemble (n = 12 &lt; 20)</span></span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a><span class="co">#&gt; [1] 0.8261654</span></span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a><span class="fu">scale_robust</span>(x_small, <span class="at">ci =</span> <span class="cn">TRUE</span>)   <span class="co"># BCa bootstrap CI</span></span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a><span class="co">#&gt; Ensemble estimate: 0.8262</span></span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a><span class="co">#&gt; 95% bootstrap CI (bca): [0.5546, 1.2405]</span></span>
+<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a><span class="co">#&gt; Component estimators:</span></span>
+<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a><span class="co">#&gt;   estimator estimate  weight analytical_lower analytical_upper boot_lower</span></span>
+<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a><span class="co">#&gt;       sd_c4   0.8293 0.31376           0.5875            1.408     0.5833</span></span>
+<span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a><span class="co">#&gt;         gmd   0.8414 0.28733           0.5014            1.181     0.6054</span></span>
+<span id="cb4-13"><a href="#cb4-13" tabindex="-1"></a><span class="co">#&gt;  mad_scaled   0.7737 0.05480           0.2634            1.284     0.2252</span></span>
+<span id="cb4-14"><a href="#cb4-14" tabindex="-1"></a><span class="co">#&gt;  iqr_scaled   0.7428 0.07801           0.2543            1.231     0.3158</span></span>
+<span id="cb4-15"><a href="#cb4-15" tabindex="-1"></a><span class="co">#&gt;          sn   0.9515 0.06101           0.4517            1.451     0.2956</span></span>
+<span id="cb4-16"><a href="#cb4-16" tabindex="-1"></a><span class="co">#&gt;          qn   0.8658 0.10749           0.4833            1.248     0.3516</span></span>
+<span id="cb4-17"><a href="#cb4-17" tabindex="-1"></a><span class="co">#&gt;    robScale   0.7451 0.09760           0.3432            1.147     0.3063</span></span>
+<span id="cb4-18"><a href="#cb4-18" tabindex="-1"></a><span class="co">#&gt;  boot_upper</span></span>
+<span id="cb4-19"><a href="#cb4-19" tabindex="-1"></a><span class="co">#&gt;       1.129</span></span>
+<span id="cb4-20"><a href="#cb4-20" tabindex="-1"></a><span class="co">#&gt;       1.113</span></span>
+<span id="cb4-21"><a href="#cb4-21" tabindex="-1"></a><span class="co">#&gt;       1.453</span></span>
+<span id="cb4-22"><a href="#cb4-22" tabindex="-1"></a><span class="co">#&gt;       1.443</span></span>
+<span id="cb4-23"><a href="#cb4-23" tabindex="-1"></a><span class="co">#&gt;       1.447</span></span>
+<span id="cb4-24"><a href="#cb4-24" tabindex="-1"></a><span class="co">#&gt;       1.300</span></span>
+<span id="cb4-25"><a href="#cb4-25" tabindex="-1"></a><span class="co">#&gt;       1.289</span></span></code></pre></div>
+</div>
+<div id="automatic-switch-to-gmd-n-geq-20" class="section level3">
+<h3>Automatic switch to GMD (<span class="math inline">\(n \geq
+20\)</span>)</h3>
+<p>For larger samples, <code>scale_robust()</code> uses
+<code>gmd()</code> directly: 98% ARE, 29.3% breakdown, <span class="math inline">\(O(n \log n)\)</span>.</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>x_large <span class="ot">&lt;-</span> <span class="fu">rnorm</span>(<span class="dv">500</span>)</span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a><span class="fu">scale_robust</span>(x_large)   <span class="co"># equivalent to gmd(x_large)</span></span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a><span class="co">#&gt; [1] 1.017226</span></span></code></pre></div>
+</div>
+<div id="explicit-method-selection" class="section level3">
+<h3>Explicit method selection</h3>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="fu">scale_robust</span>(x_small, <span class="at">method =</span> <span class="st">&quot;qn&quot;</span>)       <span class="co"># force Qn</span></span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a><span class="co">#&gt; [1] 0.8658276</span></span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a><span class="fu">scale_robust</span>(x_small, <span class="at">method =</span> <span class="st">&quot;robScale&quot;</span>) <span class="co"># force M-scale</span></span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a><span class="co">#&gt; [1] 0.7451493</span></span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a><span class="fu">scale_robust</span>(x_small, <span class="at">auto_switch =</span> <span class="cn">FALSE</span>) <span class="co"># keep ensemble at any n</span></span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a><span class="co">#&gt; [1] 0.8261654</span></span></code></pre></div>
+</div>
+</div>
+<div id="individual-estimators" class="section level2">
+<h2>5. Individual Estimators</h2>
+<div id="sd_c4x-bias-corrected-standard-deviation" class="section level3">
+<h3><code>sd_c4(x)</code>: Bias-corrected standard deviation</h3>
+<p>Applies the exact <span class="math inline">\(c_4(n)\)</span>
+finite-sample correction to remove the downward bias of the sample
+standard deviation under normality:</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="fl">1.2</span>, <span class="fl">0.8</span>, <span class="fl">1.5</span>, <span class="fl">0.9</span>, <span class="fl">1.1</span>)</span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a><span class="fu">sd_c4</span>(x)              <span class="co"># unbiased under normality</span></span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a><span class="co">#&gt; [1] 0.2913462</span></span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a><span class="fu">sd</span>(x)                 <span class="co"># biased downward for small n</span></span>
+<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a><span class="co">#&gt; [1] 0.2738613</span></span>
+<span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a><span class="fu">sd_c4</span>(x, <span class="at">ci =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a><span class="co">#&gt; sd_c4 estimate: 0.2913</span></span>
+<span id="cb7-8"><a href="#cb7-8" tabindex="-1"></a><span class="co">#&gt; 95% CI (analytical): [0.1746, 0.8372]</span></span></code></pre></div>
+</div>
+<div id="gmdx-gini-mean-difference" class="section level3">
+<h3><code>gmd(x)</code>: Gini mean difference</h3>
+<p>Average absolute pairwise difference <span class="citation">(Gini
+1912)</span>, computed via the order-statistics form in <span class="math inline">\(O(n \log n)\)</span>:</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a><span class="fu">gmd</span>(<span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">5</span>, <span class="dv">7</span>, <span class="dv">8</span>))</span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a><span class="co">#&gt; [1] 3.072253</span></span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a><span class="fu">gmd</span>(<span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">5</span>, <span class="dv">7</span>, <span class="dv">8</span>), <span class="at">ci =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a><span class="co">#&gt; gmd estimate: 3.0723</span></span>
+<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a><span class="co">#&gt; 95% CI (analytical): [1.3163, 4.8282]</span></span></code></pre></div>
+</div>
+<div id="admx-average-deviation-from-the-median" class="section level3">
+<h3><code>adm(x)</code>: Average deviation from the median</h3>
+<p>The mean deviation from the median <span class="citation">(Nair 1936,
+1947)</span>, scaled for consistency at the normal distribution.</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a><span class="fu">adm</span>(<span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">5</span>, <span class="dv">7</span>, <span class="dv">8</span>))</span>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a><span class="co">#&gt; [1] 2.9244</span></span></code></pre></div>
+</div>
+<div id="qnx-rousseeuwcroux-q_n-rousseeuw1993" class="section level3">
+<h3><code>qn(x)</code>: Rousseeuw–Croux <span class="math inline">\(Q_n\)</span> <span class="citation">(Rousseeuw and
+Croux 1993)</span></h3>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a><span class="fu">qn</span>(<span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">5</span>, <span class="dv">7</span>, <span class="dv">8</span>))</span>
+<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a><span class="co">#&gt; [1] 2.717298</span></span>
+<span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a><span class="fu">qn</span>(<span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">5</span>, <span class="dv">7</span>, <span class="dv">8</span>), <span class="at">ci =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb10-4"><a href="#cb10-4" tabindex="-1"></a><span class="co">#&gt; qn estimate: 2.7173</span></span>
+<span id="cb10-5"><a href="#cb10-5" tabindex="-1"></a><span class="co">#&gt; 95% CI (analytical): [1.0195, 4.4151]</span></span></code></pre></div>
+</div>
+<div id="snx-rousseeuwcroux-s_n" class="section level3">
+<h3><code>sn(x)</code>: Rousseeuw–Croux <span class="math inline">\(S_n\)</span></h3>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a><span class="fu">sn</span>(<span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">5</span>, <span class="dv">7</span>, <span class="dv">8</span>))</span>
+<span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a><span class="co">#&gt; [1] 3.556794</span></span>
+<span id="cb11-3"><a href="#cb11-3" tabindex="-1"></a><span class="fu">sn</span>(<span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">5</span>, <span class="dv">7</span>, <span class="dv">8</span>), <span class="at">ci =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb11-4"><a href="#cb11-4" tabindex="-1"></a><span class="co">#&gt; sn estimate: 3.5568</span></span>
+<span id="cb11-5"><a href="#cb11-5" tabindex="-1"></a><span class="co">#&gt; 95% CI (analytical): [0.9144, 6.1992]</span></span></code></pre></div>
+</div>
+<div id="iqr_scaledx-and-mad_scaledx" class="section level3">
+<h3><code>iqr_scaled(x)</code> and <code>mad_scaled(x)</code></h3>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" tabindex="-1"></a><span class="fu">iqr_scaled</span>(<span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">5</span>, <span class="dv">7</span>, <span class="dv">8</span>))</span>
+<span id="cb12-2"><a href="#cb12-2" tabindex="-1"></a><span class="co">#&gt; [1] 3.15053</span></span>
+<span id="cb12-3"><a href="#cb12-3" tabindex="-1"></a><span class="fu">mad_scaled</span>(<span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">5</span>, <span class="dv">7</span>, <span class="dv">8</span>))</span>
+<span id="cb12-4"><a href="#cb12-4" tabindex="-1"></a><span class="co">#&gt; [1] 3.706506</span></span></code></pre></div>
+</div>
+<div id="roblocx-m-estimator-for-location" class="section level3">
+<h3><code>robLoc(x)</code>: M-estimator for location</h3>
+<p>M-estimator for location via Newton–Raphson iteration on the logistic
+psi function <span class="citation">(Rousseeuw and Verboven 2002, Eq.
+21)</span>. Starting value: <span class="math inline">\(T^{(0)} =
+\text{median}(x)\)</span>; auxiliary scale: <span class="math inline">\(S = \text{MAD}(x)\)</span>.</p>
+<p><strong>Fallback:</strong> When scale is unknown and <span class="math inline">\(n &lt; 4\)</span>, or when scale is known and
+<span class="math inline">\(n &lt; 3\)</span>, returns
+<code>median(x)</code> without iteration.</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" tabindex="-1"></a><span class="fu">robLoc</span>(<span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">5</span>, <span class="dv">7</span>, <span class="dv">8</span>))</span>
+<span id="cb13-2"><a href="#cb13-2" tabindex="-1"></a><span class="co">#&gt; [1] 4.317035</span></span>
+<span id="cb13-3"><a href="#cb13-3" tabindex="-1"></a><span class="fu">robLoc</span>(<span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>), <span class="at">scale =</span> <span class="fl">1.5</span>)   <span class="co"># known scale enables n = 3</span></span>
+<span id="cb13-4"><a href="#cb13-4" tabindex="-1"></a><span class="co">#&gt; [1] 2</span></span></code></pre></div>
+<p>Newton–Raphson algorithm for <code>robLoc()</code>:</p>
+<pre><code>flowchart TD
+    A[Set minobs: 3 if scale known, 4 if unknown] --&gt; B[med = median x]
+    B --&gt; C{n &lt; minobs?}
+    C -- Yes --&gt; D([Return med])
+    C -- No --&gt; E{Scale known?}
+    E -- Yes --&gt; F[s = scale]
+    E -- No --&gt; G[s = MAD x]
+    F --&gt; H{s = 0?}
+    G --&gt; H
+    H -- Yes --&gt; I([Return med])
+    H -- No --&gt; J[t = med]
+    J --&gt; K[psi_i = tanh( (x_i - t) / 2s )]
+    K --&gt; L[sum_psi = Sum psi_i, sum_dpsi = Sum (1 - psi_i^2)]
+    L --&gt; M[t += 2s * sum_psi / sum_dpsi]
+    M --&gt; N{&quot;|v| &lt;= tol * max(|t|, 1)?&quot;}
+    N -- No --&gt; K
+    N -- Yes --&gt; O([Return t])</code></pre>
+</div>
+<div id="robscalex-m-estimator-for-scale" class="section level3">
+<h3><code>robScale(x)</code>: M-estimator for scale</h3>
+<p>M-estimator for scale via Newton–Raphson iteration on the M-scale
+estimating equation <span class="citation">(Rousseeuw and Verboven
+2002)</span>. Starting value: <span class="math inline">\(S^{(0)} =
+\text{MAD}(x)\)</span>.</p>
+<div class="sourceCode" id="cb15"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" tabindex="-1"></a><span class="fu">robScale</span>(<span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">5</span>, <span class="dv">7</span>, <span class="dv">8</span>))</span>
+<span id="cb15-2"><a href="#cb15-2" tabindex="-1"></a><span class="co">#&gt; [1] 3.305786</span></span>
+<span id="cb15-3"><a href="#cb15-3" tabindex="-1"></a><span class="fu">robScale</span>(<span class="fu">c</span>(<span class="dv">5</span>, <span class="dv">5</span>, <span class="dv">5</span>, <span class="dv">5</span>, <span class="dv">6</span>), <span class="at">fallback =</span> <span class="st">&quot;na&quot;</span>)   <span class="co"># revss compatibility</span></span>
+<span id="cb15-4"><a href="#cb15-4" tabindex="-1"></a><span class="co">#&gt; [1] NA</span></span>
+<span id="cb15-5"><a href="#cb15-5" tabindex="-1"></a><span class="fu">robScale</span>(<span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">5</span>, <span class="dv">7</span>, <span class="dv">8</span>), <span class="at">ci =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb15-6"><a href="#cb15-6" tabindex="-1"></a><span class="co">#&gt; robScale estimate: 3.3058</span></span>
+<span id="cb15-7"><a href="#cb15-7" tabindex="-1"></a><span class="co">#&gt; 95% CI (analytical): [0.7838, 5.8278]</span></span></code></pre></div>
+<p>Newton–Raphson iteration for <code>robScale()</code>:</p>
+<pre><code>flowchart TD
+    A{Location known?}
+    A -- Yes --&gt; B1[w = x - loc]
+    B1 --&gt; B2[s = 1.4826 * median( abs(w) )]
+    B2 --&gt; B3[t = 0, minobs = 3]
+    A -- No --&gt; C1[med = median x]
+    C1 --&gt; C2[s = MAD x, t = med]
+    C2 --&gt; C3[minobs = 4]
+    B3 --&gt; D{n &lt; minobs?}
+    C3 --&gt; D
+    D -- Yes --&gt; E{s &lt;= implbound?}
+    E -- Yes --&gt; F{fallback?}
+    F -- adm --&gt; F1([Return ADM x])
+    F -- na --&gt; F2([Return NA])
+    E -- No --&gt; G([Return s])
+    D -- No --&gt; H{s &lt;= implbound?}
+    H -- Yes --&gt; F
+    H -- No --&gt; J[&quot;u_i = (x_i - t) / (2cs), compute tanh(u_i)&quot;]
+    J --&gt; K[&quot;numer = Σtanh²/n − 0.5&lt;br/&gt;denom = (2/n)·Σ(u·tanh·sech²)&quot;]
+    L --&gt; LG{&quot;|denom| &lt;= 1e-14 * s?&quot;}
+    LG -- Yes --&gt; LF[&quot;s *= sqrt(2 * mean_tanh²)&quot;]
+    LF --&gt; J
+    LG -- No --&gt; MM[&quot;Δs = s · numer / denom&quot;]
+    MM --&gt; MG{&quot;s + Δs &lt;= 0?&quot;}
+    MG -- Yes --&gt; MH[&quot;s /= 2&quot;]
+    MH --&gt; J
+    MG -- No --&gt; MS[&quot;s ← s + Δs&quot;]
+    MS --&gt; N{&quot;|Δs|/s ≤ tol?&quot;}
+    N -- No --&gt; J
+    N -- Yes --&gt; O([Return s])</code></pre>
+</div>
+</div>
+<div id="confidence-intervals" class="section level2">
+<h2>6. Confidence Intervals</h2>
+<p>All scale estimators support <code>ci = TRUE</code>:</p>
+<div class="sourceCode" id="cb17"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" tabindex="-1"></a><span class="co"># Analytical CI (chi-squared for sd_c4, ARE-based for others)</span></span>
+<span id="cb17-2"><a href="#cb17-2" tabindex="-1"></a><span class="fu">sd_c4</span>(<span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">5</span>, <span class="dv">7</span>, <span class="dv">8</span>), <span class="at">ci =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb17-3"><a href="#cb17-3" tabindex="-1"></a><span class="co">#&gt; sd_c4 estimate: 2.9476</span></span>
+<span id="cb17-4"><a href="#cb17-4" tabindex="-1"></a><span class="co">#&gt; 95% CI (analytical): [1.8399, 7.2294]</span></span>
+<span id="cb17-5"><a href="#cb17-5" tabindex="-1"></a><span class="fu">gmd</span>(<span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">5</span>, <span class="dv">7</span>, <span class="dv">8</span>), <span class="at">ci =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb17-6"><a href="#cb17-6" tabindex="-1"></a><span class="co">#&gt; gmd estimate: 3.0723</span></span>
+<span id="cb17-7"><a href="#cb17-7" tabindex="-1"></a><span class="co">#&gt; 95% CI (analytical): [1.3163, 4.8282]</span></span>
+<span id="cb17-8"><a href="#cb17-8" tabindex="-1"></a></span>
+<span id="cb17-9"><a href="#cb17-9" tabindex="-1"></a><span class="co"># BCa bootstrap CI for scale_robust() ensemble</span></span>
+<span id="cb17-10"><a href="#cb17-10" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">42</span>)</span>
+<span id="cb17-11"><a href="#cb17-11" tabindex="-1"></a>x_small <span class="ot">&lt;-</span> <span class="fu">rnorm</span>(<span class="dv">10</span>)</span>
+<span id="cb17-12"><a href="#cb17-12" tabindex="-1"></a><span class="fu">scale_robust</span>(x_small, <span class="at">ci =</span> <span class="cn">TRUE</span>, <span class="at">n_boot =</span> <span class="dv">500</span>)</span>
+<span id="cb17-13"><a href="#cb17-13" tabindex="-1"></a><span class="co">#&gt; Ensemble estimate: 0.8321</span></span>
+<span id="cb17-14"><a href="#cb17-14" tabindex="-1"></a><span class="co">#&gt; 95% bootstrap CI (bca): [0.5010, 1.2110]</span></span>
+<span id="cb17-15"><a href="#cb17-15" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb17-16"><a href="#cb17-16" tabindex="-1"></a><span class="co">#&gt; Component estimators:</span></span>
+<span id="cb17-17"><a href="#cb17-17" tabindex="-1"></a><span class="co">#&gt;   estimator estimate  weight analytical_lower analytical_upper boot_lower</span></span>
+<span id="cb17-18"><a href="#cb17-18" tabindex="-1"></a><span class="co">#&gt;       sd_c4   0.8589 0.32524           0.5908           1.5681    0.62712</span></span>
+<span id="cb17-19"><a href="#cb17-19" tabindex="-1"></a><span class="co">#&gt;         gmd   0.8671 0.27949           0.4832           1.2509    0.63590</span></span>
+<span id="cb17-20"><a href="#cb17-20" tabindex="-1"></a><span class="co">#&gt;  mad_scaled   0.7177 0.06932           0.1992           1.2362    0.04068</span></span>
+<span id="cb17-21"><a href="#cb17-21" tabindex="-1"></a><span class="co">#&gt;  iqr_scaled   0.9438 0.07122           0.2638           1.6237    0.33936</span></span>
+<span id="cb17-22"><a href="#cb17-22" tabindex="-1"></a><span class="co">#&gt;          sn   0.6129 0.06227           0.2602           0.9656    0.05213</span></span>
+<span id="cb17-23"><a href="#cb17-23" tabindex="-1"></a><span class="co">#&gt;          qn   0.8021 0.11373           0.4139           1.1904    0.68047</span></span>
+<span id="cb17-24"><a href="#cb17-24" tabindex="-1"></a><span class="co">#&gt;    robScale   0.8137 0.07872           0.3328           1.2945    0.28543</span></span>
+<span id="cb17-25"><a href="#cb17-25" tabindex="-1"></a><span class="co">#&gt;  boot_upper</span></span>
+<span id="cb17-26"><a href="#cb17-26" tabindex="-1"></a><span class="co">#&gt;       1.217</span></span>
+<span id="cb17-27"><a href="#cb17-27" tabindex="-1"></a><span class="co">#&gt;       1.153</span></span>
+<span id="cb17-28"><a href="#cb17-28" tabindex="-1"></a><span class="co">#&gt;       1.507</span></span>
+<span id="cb17-29"><a href="#cb17-29" tabindex="-1"></a><span class="co">#&gt;       1.566</span></span>
+<span id="cb17-30"><a href="#cb17-30" tabindex="-1"></a><span class="co">#&gt;       1.760</span></span>
+<span id="cb17-31"><a href="#cb17-31" tabindex="-1"></a><span class="co">#&gt;       1.404</span></span>
+<span id="cb17-32"><a href="#cb17-32" tabindex="-1"></a><span class="co">#&gt;       1.468</span></span></code></pre></div>
+<p>The CI return type is a named list with <code>estimate</code>,
+<code>lower</code>, <code>upper</code>, and <code>level</code>. For
+<code>scale_robust()</code> in ensemble mode, the object class is
+<code>robscale_ensemble_ci</code> and includes per-estimator
+weights.</p>
+</div>
+<div id="performance-architecture" class="section level2">
+<h2>7. Performance Architecture</h2>
+<div id="simd-vectorization" class="section level3">
+<h3>SIMD vectorization</h3>
+<p>The logistic psi function satisfies <span class="math inline">\(\psi_{\log}(x) = \tanh(x/2)\)</span>.
+<code>robscale</code> evaluates <code>tanh</code> in bulk using the
+fastest available platform backend. The <code>configure</code> script
+selects one of two vectorized <code>tanh</code> libraries at compile
+time; at runtime, CPUID selects the widest available instruction
+set:</p>
+<ol style="list-style-type: decimal">
+<li><strong>Apple Accelerate</strong> (<code>vvtanh</code>): array-wide
+SIMD on macOS.</li>
+<li><strong>glibc libmvec</strong> (Linux x86_64, glibc <span class="math inline">\(\geq\)</span> 2.35) or <strong>SLEEF</strong>
+(fallback when libmvec is absent). Only one is linked per binary. Within
+the linked library, CPUID dispatches to:
+<ul>
+<li><strong>AVX-512 8-wide</strong> (<code>_ZGVeN8v_tanh</code>): 8
+doubles per iteration on AVX-512F hardware.</li>
+<li><strong>AVX2 4-wide</strong> (<code>_ZGVdN4v_tanh</code> or
+<code>Sleef_tanhd4_u10avx2</code>): 4 doubles per iteration.</li>
+</ul></li>
+<li><strong>OpenMP SIMD</strong> (<code>#pragma omp simd</code>):
+compiler-guided portable fallback.</li>
+<li><strong>Scalar</strong> <code>std::tanh</code>: universal
+fallback.</li>
+</ol>
+<p>For the bulk tanh dispatcher, vectorization requires <span class="math inline">\(n \geq 8\)</span>. However, <code>robLoc</code>’s
+fused AVX2 NR kernel activates at <span class="math inline">\(n \geq
+4\)</span> (one full 4-wide vector).</p>
+<p>The Gini mean difference uses a separate AVX2 FMA kernel
+(<code>_mm256_fmadd_pd</code>) for its weighted sum <span class="math inline">\(\sum (2i - (n-1))\, x_{(i)}\)</span>, shared
+across the standalone <code>gmd()</code>, the ensemble bootstrap, and
+the BCa jackknife. This kernel activates for <span class="math inline">\(n \geq 8\)</span> on AVX2 hardware.</p>
+</div>
+<div id="on-median-selection" class="section level3">
+<h3><span class="math inline">\(O(n)\)</span> median selection</h3>
+<p><code>robscale</code> uses a tiered strategy rather than
+<code>sort()</code>:</p>
+<ul>
+<li><strong><span class="math inline">\(n \leq 16\)</span></strong>:
+optimal sorting networks (verified minimal comparator counts, compiled
+to branchless machine code at <code>-O2</code>):</li>
+</ul>
+<table>
+<thead>
+<tr class="header">
+<th align="right"><span class="math inline">\(n\)</span></th>
+<th align="right">Comparators</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="right">3</td>
+<td align="right">3</td>
+</tr>
+<tr class="even">
+<td align="right">4</td>
+<td align="right">5</td>
+</tr>
+<tr class="odd">
+<td align="right">8</td>
+<td align="right">19</td>
+</tr>
+<tr class="even">
+<td align="right">12</td>
+<td align="right">39</td>
+</tr>
+<tr class="odd">
+<td align="right">16</td>
+<td align="right">60</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong><span class="math inline">\(17 \leq n &lt;
+600\)</span></strong>: <code>std::nth_element</code> (introselect, <span class="math inline">\(O(n)\)</span> worst-case).</li>
+<li><strong><span class="math inline">\(n \geq 600\)</span></strong>:
+Floyd–Rivest algorithm <span class="citation">(Floyd and Rivest
+1975)</span>, which narrows the active window to <span class="math inline">\(O(n^{2/3})\)</span> elements before
+partitioning.</li>
+</ul>
+<p>The crossover between Floyd–Rivest and pdqselect is derived at
+runtime from the per-core L2 cache size; each estimator uses its own
+threshold based on working-set pressure:</p>
+<table>
+<colgroup>
+<col width="33%" />
+<col width="33%" />
+<col width="33%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Estimator</th>
+<th align="left">Strategy</th>
+<th align="left">Threshold</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left"><code>iqr_scaled</code></td>
+<td align="left">Always pdqselect</td>
+<td align="left">—</td>
+</tr>
+<tr class="even">
+<td align="left"><code>mad_scaled</code></td>
+<td align="left">Floyd–Rivest vs. pdqselect</td>
+<td align="left"><span class="math inline">\(\max(2048,\, L_2 /
+40)\)</span></td>
+</tr>
+<tr class="odd">
+<td align="left"><code>robScale</code></td>
+<td align="left">Floyd–Rivest vs. pdqselect</td>
+<td align="left"><span class="math inline">\(\max(2048,\, L_2 /
+16)\)</span></td>
+</tr>
+<tr class="even">
+<td align="left"><span class="math inline">\(S_n\)</span></td>
+<td align="left">Floyd–Rivest vs. pdqselect</td>
+<td align="left"><span class="math inline">\(\max(2048,\, L_2 /
+16)\)</span></td>
+</tr>
+<tr class="odd">
+<td align="left"><span class="math inline">\(Q_n\)</span> (final
+window)</td>
+<td align="left">Inline check</td>
+<td align="left"><span class="math inline">\(\max(2048,\, L_2 /
+32)\)</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="stack-allocated-memory-arenas" class="section level3">
+<h3>Stack-allocated memory arenas</h3>
+<p>A 128-double micro-buffer (1 KB) covers the smallest samples (<span class="math inline">\(n \leq 128\)</span> for MAD, <span class="math inline">\(n \leq 64\)</span> for <code>robScale</code> and
+<code>robLoc</code>). For <span class="math inline">\(n \leq
+2{,}048\)</span>, stack-allocated arrays avoid heap allocation:
+<code>robScale</code> uses one 2,048-double array (16 KB);
+<code>robLoc</code> uses one 4,096-double array (32 KB, split into
+equal-sized buffer and deviation halves).</p>
+<p><strong>Fused single-buffer algorithm.</strong> After median
+selection the working buffer holds a permutation of the input. Because
+MAD is order-invariant, absolute deviations can be computed in-place,
+eliminating the second scratch array and halving memory from <span class="math inline">\(2n\)</span> to <span class="math inline">\(n\)</span> doubles per estimator.</p>
+</div>
+<div id="iteration-convergence" class="section level3">
+<h3>Iteration convergence</h3>
+<p><strong><code>robLoc</code>: Newton–Raphson.</strong> Location
+estimation uses Newton–Raphson (quadratic convergence, ~3 iterations)
+rather than the scoring fixed-point method (~6–8 iterations):</p>
+<p><span class="math display">\[
+T^{(k+1)} = T^{(k)} + \frac{2\,S\sum \psi\!\left(\frac{x_i -
+T^{(k)}}{2S}\right)}
+{\sum \left[1 - \psi^2\!\left(\frac{x_i - T^{(k)}}{2S}\right)\right]}
+\]</span></p>
+<p>Since <span class="math inline">\(\tanh\)</span> values are already
+computed for the numerator, the denominator costs only squaring and
+subtraction. Typical iteration counts:</p>
+<table>
+<thead>
+<tr class="header">
+<th align="right"><span class="math inline">\(n\)</span></th>
+<th align="right">Scoring</th>
+<th align="right">Newton–Raphson</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="right">4</td>
+<td align="right">7</td>
+<td align="right">2–4</td>
+</tr>
+<tr class="even">
+<td align="right">8</td>
+<td align="right">7</td>
+<td align="right">2–4</td>
+</tr>
+<tr class="odd">
+<td align="right">20</td>
+<td align="right">6</td>
+<td align="right">2–4</td>
+</tr>
+<tr class="even">
+<td align="right">100</td>
+<td align="right">5</td>
+<td align="right">2–4</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Fused AVX2 kernel for <code>robLoc()</code>.</strong>
+<code>rob_loc_nr_step_avx2</code> collapses three passes into one. Two
+AVX2 accumulators advance in lockstep:</p>
+<p><span class="math display">\[
+\texttt{acc\_psi} \mathrel{+}= p_i, \qquad \texttt{acc\_dpsi}
+\mathrel{+}= (1 - p_i^2)
+\]</span></p>
+<p>where <span class="math inline">\(p_i = \tanh(u_i)\)</span> is
+evaluated once. The derivative accumulator uses a fused negative
+multiply-add (fnmadd) to accumulate <span class="math inline">\(1 -
+p_i^2\)</span> directly, avoiding the catastrophic cancellation that
+would arise from subtracting two large numbers (<span class="math inline">\(n - \sum p_i^2\)</span>) when all <span class="math inline">\(|u_i| \gg 1\)</span>.</p>
+<p><strong><code>robScale</code>: Newton–Raphson.</strong> Scale
+estimation also uses Newton–Raphson, applied to the M-scale estimating
+equation <span class="math inline">\(n^{-1}\sum \rho(u_i) =
+1/2\)</span>. The fused single-pass kernel
+(<code>nr_scale_step_avx2</code> / <code>nr_scale_step_scalar</code>)
+computes <span class="math inline">\(\sum \tanh^2(u_i)\)</span> and
+<span class="math inline">\(\sum u_i
+\tanh(u_i)\,\text{sech}^2(u_i)\)</span> in one read over the data,
+yielding the NR update <span class="math inline">\(\Delta s = s \cdot
+(\bar\rho - \tfrac{1}{2}) / \bar{D}\)</span> where <span class="math inline">\(\bar{D}\)</span> is the scaled derivative sum. The
+same quadratic convergence as <code>robLoc</code> applies; typical
+iteration counts are 3–4. A degenerate-denominator guard applies two
+protections: when the denominator is degenerate (<span class="math inline">\(|\bar{D}| \leq 10^{-14} \times s\)</span>), a
+multiplicative fallback <span class="math inline">\(s \leftarrow s
+\times \sqrt{2 \times \overline{\tanh^2}}\)</span> replaces the Newton
+step, avoiding the catastrophic cancellation of subtracting two large
+numbers. A separate guard halves <span class="math inline">\(s\)</span>
+when the proposed update would make <span class="math inline">\(s\)</span> non-positive (<span class="math inline">\(s + \Delta s \leq 0\)</span>).</p>
+</div>
+<div id="tbb-parallelism-and-ensemble-design" class="section level3">
+<h3>TBB parallelism and ensemble design</h3>
+<p><span class="math inline">\(Q_n\)</span> and <span class="math inline">\(S_n\)</span> partition inner loops across TBB
+threads for <span class="math inline">\(n\)</span> above a runtime
+L2-derived threshold. The ensemble bootstrap parallelizes across TBB
+threads when <span class="math inline">\(n \times n_{\text{boot}} \geq
+10{,}000\)</span>; with default settings (<span class="math inline">\(n
+&lt; 20\)</span>, <span class="math inline">\(n_{\text{boot}} =
+200\)</span>) the bootstrap runs serially.</p>
+<p>The ensemble bootstrap stores results in estimator-major layout
+(<span class="math inline">\(7 \times n_{\text{boot}}\)</span>): each
+estimator’s replicates occupy a contiguous memory column, so the
+mean/variance reduction pass reads at stride-1 rather than stride-7.
+Within each replicate, the bootstrap resample is sorted once and reused
+by all seven estimators; pre-allocated workspace buffers eliminate
+per-replicate heap allocation for <span class="math inline">\(S_n\)</span> and <span class="math inline">\(Q_n\)</span>. Bootstrap resampling uses a
+deterministic XorShift32 PRNG <span class="citation">(Marsaglia
+2003)</span> seeded per replicate for reproducibility.</p>
+</div>
+<div id="numerical-stability-and-compile-time-optimizations" class="section level3">
+<h3>Numerical stability and compile-time optimizations</h3>
+<ul>
+<li><code>sd_c4</code> uses Welford’s one-pass algorithm <span class="citation">(Welford 1962)</span> for numerically stable
+variance.</li>
+<li>The reciprocal constant <span class="math inline">\(1/c\)</span> is
+<code>constexpr</code>, replacing an inner-loop division with
+multiplication.</li>
+<li>Loop-invariant quantities (<code>inv_s</code>,
+<code>half_inv_s</code>, <code>inv_n</code>) are hoisted before the
+iteration loop.</li>
+<li>Sorting-network entry points are instantiated in a single
+translation unit, reducing cold build time from ~300 s to ~52 s.</li>
+</ul>
+</div>
+</div>
+<div id="mathematical-foundations" class="section level2">
+<h2>8. Mathematical Foundations</h2>
+<div id="logistic-psi-function" class="section level3">
+<h3>Logistic psi function</h3>
+<p><span class="citation">(Rousseeuw and Verboven 2002, Eq.
+23)</span>:</p>
+<p><span class="math display">\[
+\psi_{\log}(x) = \frac{e^x - 1}{e^x + 1} = \tanh(x/2)
+\]</span></p>
+<p>Bounded in <span class="math inline">\((-1, 1)\)</span>, <span class="math inline">\(C^\infty\)</span>, strictly monotone. Boundedness
+provides robustness; smoothness avoids the corner artifacts of Huber’s
+psi at small <span class="math inline">\(n\)</span>.</p>
+</div>
+<div id="decoupled-estimation" class="section level3">
+<h3>Decoupled estimation</h3>
+<p>Location and scale are estimated separately with a fixed auxiliary
+estimate, breaking the positive-feedback loop of Huber’s Proposal 2.
+<code>robLoc</code> fixes scale at <span class="math inline">\(\text{MAD}(x)\)</span>; <code>robScale</code>
+fixes location at <span class="math inline">\(\text{median}(x)\)</span>.</p>
+</div>
+<div id="rho-function-for-scale" class="section level3">
+<h3>Rho function for scale</h3>
+<p><span class="citation">(Rousseeuw and Verboven 2002, Eq.
+26)</span>:</p>
+<p><span class="math display">\[
+\rho_{\log}(x) = \psi_{\log}^2(x / c)
+\]</span></p>
+<p>where <span class="math inline">\(c = 0.37394112142347236\)</span> is
+the constant that yields a 50% breakdown point.</p>
+</div>
+<div id="q_n-and-s_n-statistics" class="section level3">
+<h3><span class="math inline">\(Q_n\)</span> and <span class="math inline">\(S_n\)</span> statistics</h3>
+<p><span class="math display">\[Q_n = c_n \cdot 2.2191 \cdot \{|x_i -
+x_j|;\; i &lt; j\}_{(k)}\]</span></p>
+<p>where <span class="math inline">\(k = \binom{h}{2}\)</span>, <span class="math inline">\(h = \lfloor n/2 \rfloor + 1\)</span>, and <span class="math inline">\(c_n\)</span> is the finite-sample correction
+factor.</p>
+<p><span class="math display">\[S_n = c_n&#39; \cdot 1.1926 \cdot
+\operatorname{lomed}_i \{\operatorname{himed}_j |x_i -
+x_j|\}\]</span></p>
+<p>where <span class="math inline">\(\operatorname{lomed}\)</span> and
+<span class="math inline">\(\operatorname{himed}\)</span> denote the low
+and high medians respectively.</p>
+</div>
+<div id="c_4n-correction-factor" class="section level3">
+<h3><span class="math inline">\(c_4(n)\)</span> correction factor</h3>
+<p><span class="math display">\[
+c_4(n) = \sqrt{\frac{2}{n{-}1}} \cdot
+\frac{\Gamma(n/2)}{\Gamma((n{-}1)/2)}
+\]</span></p>
+</div>
+<div id="gini-mean-difference" class="section level3">
+<h3>Gini mean difference</h3>
+<p><span class="math display">\[
+\text{GMD}(x) = C_{\text{GMD}} \cdot \frac{2}{n(n{-}1)}\sum_{i=1}^{n}
+(2i - n - 1)\, x_{(i)}
+\]</span></p>
+<p>Algebraically equivalent to <span class="math inline">\(\frac{1}{\binom{n}{2}}\sum_{i&lt;j}|x_i -
+x_j|\)</span>, but computed in <span class="math inline">\(O(n \log
+n)\)</span> via sorted-array indexing.</p>
+</div>
+<div id="ensemble-weighting-formula" class="section level3">
+<h3>Ensemble weighting formula</h3>
+<p>Weights are the normalized inverse bootstrap variances <span class="math inline">\(w_j = (1/V_j) / \sum_k (1/V_k)\)</span> where
+<span class="math inline">\(V_j =
+\operatorname{Var}_{\text{boot}}(\hat\sigma_j)\)</span>:</p>
+<p><span class="math display">\[
+\hat\sigma = \frac{\sum_{j=1}^{J} \hat\sigma_j(x) \,/\,
+\operatorname{Var}_{\mathrm{boot}}(\hat\sigma_j)}{\sum_{j=1}^{J} 1 \,/\,
+\operatorname{Var}_{\mathrm{boot}}(\hat\sigma_j)}
+\]</span></p>
+</div>
+<div id="key-constants-full-double-precision" class="section level3">
+<h3>Key constants (full double precision)</h3>
+<table>
+<colgroup>
+<col width="33%" />
+<col width="33%" />
+<col width="33%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Symbol</th>
+<th align="left">Value</th>
+<th align="left">Definition</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left"><span class="math inline">\(c\)</span></td>
+<td align="left"><code>0.37394112142347236</code></td>
+<td align="left">Solution to <span class="math inline">\(\int
+\rho_{\log}(u)\,d\Phi(u) = 0.5\)</span>; scale rho constant</td>
+</tr>
+<tr class="even">
+<td align="left"><span class="math inline">\(C_{\text{ADM}}\)</span></td>
+<td align="left"><code>1.2533141373155001</code></td>
+<td align="left"><span class="math inline">\(\sqrt{\pi/2}\)</span>; ADM
+consistency constant</td>
+</tr>
+<tr class="odd">
+<td align="left"><span class="math inline">\(C_{\text{MAD}}\)</span></td>
+<td align="left"><code>1.482602218505602</code></td>
+<td align="left"><span class="math inline">\(1/\Phi^{-1}(3/4)\)</span>;
+MAD consistency constant</td>
+</tr>
+<tr class="even">
+<td align="left"><span class="math inline">\(C_{\text{GMD}}\)</span></td>
+<td align="left"><code>0.886226925452758</code></td>
+<td align="left"><span class="math inline">\(\sqrt{\pi}/2\)</span>; GMD
+consistency constant</td>
+</tr>
+<tr class="odd">
+<td align="left"><span class="math inline">\(C_{\text{IQR}}\)</span></td>
+<td align="left"><code>0.741301109252801</code></td>
+<td align="left"><span class="math inline">\(1/(\Phi^{-1}(0.75) -
+\Phi^{-1}(0.25))\)</span>; IQR consistency constant</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div id="compatibility" class="section level2">
+<h2>9. Compatibility</h2>
+<div id="revss-api" class="section level3">
+<h3>revss API</h3>
+<p><code>adm()</code>, <code>robLoc()</code>, and
+<code>robScale()</code> accept the same arguments and return the same
+values as <code>revss</code>. Code using <code>revss</code> can switch
+to <code>robscale</code> by changing only the <code>library()</code>
+call:</p>
+<div class="sourceCode" id="cb18"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="fl">1.2</span>, <span class="fl">2.4</span>, <span class="fl">3.1</span>, <span class="fl">5.5</span>, <span class="fl">7.0</span>)</span>
+<span id="cb18-2"><a href="#cb18-2" tabindex="-1"></a>revss<span class="sc">::</span><span class="fu">robScale</span>(x)</span>
+<span id="cb18-3"><a href="#cb18-3" tabindex="-1"></a><span class="co">#&gt; [1] 3.094334</span></span>
+<span id="cb18-4"><a href="#cb18-4" tabindex="-1"></a>robscale<span class="sc">::</span><span class="fu">robScale</span>(x)   <span class="co"># same value</span></span>
+<span id="cb18-5"><a href="#cb18-5" tabindex="-1"></a><span class="co">#&gt; [1] 2.34597</span></span></code></pre></div>
+<p>Note: <code>revss</code> v3.1.0 updated its bias correction factors;
+<code>robscale</code> follows the <span class="citation">Rousseeuw and
+Verboven (2002)</span> estimating equations and constants but solves
+them via Newton–Raphson rather than the original multiplicative
+iteration, so results may differ at convergence tolerance.</p>
+</div>
+<div id="robustbase-api" class="section level3">
+<h3>robustbase API</h3>
+<p><code>qn()</code> and <code>sn()</code> match
+<code>robustbase::Qn()</code> and <code>robustbase::Sn()</code> (with
+lowercase names for consistency).</p>
+</div>
+<div id="numerical-equivalence" class="section level3">
+<h3>Numerical equivalence</h3>
+<p>At tolerance <span class="math inline">\(\sqrt{\epsilon_{\text{mach}}} \approx 1.49 \times
+10^{-8}\)</span>, <code>robscale</code> matches <code>revss</code>
+across 5,400 randomly generated inputs (<span class="math inline">\(n =
+3, \ldots, 20\)</span>; 100 replicates per <span class="math inline">\(n\)</span>; 100% pass rate). See
+<code>tests/testthat/test-cross-check.R</code> for full test
+coverage.</p>
+</div>
+</div>
+<div id="references" class="section level2 unnumbered">
+<h2 class="unnumbered">10. References</h2>
+<div id="refs" class="references csl-bib-body hanging-indent" entry-spacing="0">
+<div id="ref-bickel1976" class="csl-entry">
+Bickel, P. J., and E. L. Lehmann. 1976. <span>“Descriptive Statistics
+for Nonparametric Models <span>III</span>.
+<span>Dispersion</span>.”</span> <em>Annals of Statistics</em> 4 (6):
+1139–58. <a href="https://doi.org/10.1214/aos/1176343648">https://doi.org/10.1214/aos/1176343648</a>.
+</div>
+<div id="ref-floyd1975" class="csl-entry">
+Floyd, R. W., and R. L. Rivest. 1975. <span>“Expected Time Bounds for
+Selection.”</span> <em>Communications of the ACM</em> 18 (3): 165–72. <a href="https://doi.org/10.1145/360680.360691">https://doi.org/10.1145/360680.360691</a>.
+</div>
+<div id="ref-gini1912" class="csl-entry">
+Gini, C. 1912. <em>Variabilità e Mutabilità</em>. Bologna: Tipografia di
+Paolo Cuppini.
+</div>
+<div id="ref-marsaglia2003" class="csl-entry">
+Marsaglia, George. 2003. <span>“Xorshift <span>RNGs</span>.”</span>
+<em>Journal of Statistical Software</em> 8 (14): 1–6. <a href="https://doi.org/10.18637/jss.v008.i14">https://doi.org/10.18637/jss.v008.i14</a>.
+</div>
+<div id="ref-nair1936" class="csl-entry">
+Nair, K. R. 1936. <span>“On the Mean Deviation.”</span>
+<em>Biometrika</em> 28 (3/4): 428–36. <a href="https://doi.org/10.2307/2333958">https://doi.org/10.2307/2333958</a>.
+</div>
+<div id="ref-nair1947" class="csl-entry">
+———. 1947. <span>“A Note on the Mean Deviation from the Median.”</span>
+<em>Biometrika</em> 34 (3/4): 360–62. <a href="https://doi.org/10.2307/2332448">https://doi.org/10.2307/2332448</a>.
+</div>
+<div id="ref-rousseeuw1993" class="csl-entry">
+Rousseeuw, P. J., and C. Croux. 1993. <span>“Alternatives to the Median
+Absolute Deviation.”</span> <em>Journal of the American Statistical
+Association</em> 88: 1273–83. <a href="https://doi.org/10.1080/01621459.1993.10476408">https://doi.org/10.1080/01621459.1993.10476408</a>.
+</div>
+<div id="ref-rousseeuw2002" class="csl-entry">
+Rousseeuw, P. J., and S. Verboven. 2002. <span>“Robust Estimation in
+Very Small Samples.”</span> <em>Computational Statistics &amp; Data
+Analysis</em> 40 (4): 741–58. <a href="https://doi.org/10.1016/S0167-9473(02)00078-6">https://doi.org/10.1016/S0167-9473(02)00078-6</a>.
+</div>
+<div id="ref-welford1962" class="csl-entry">
+Welford, B. P. 1962. <span>“Note on a Method for Calculating Corrected
+Sums of Squares and Products.”</span> <em>Technometrics</em> 4 (3):
+419–20. <a href="https://doi.org/10.1080/00401706.1962.10490022">https://doi.org/10.1080/00401706.1962.10490022</a>.
+</div>
+</div>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

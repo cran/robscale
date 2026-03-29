@@ -8,46 +8,74 @@
 #include "qnsn_sort_utils.h"
 #include "qnsn_runtime_config.h"
 
-#include <RcppParallel.h>
-#ifdef USE_DIRECT_TBB
-// Include TBB headers
-#include <tbb/parallel_for.h>
-#include <tbb/parallel_reduce.h>
-#include <tbb/blocked_range.h>
-#endif
+#include "worker_compat.h"
 #include <algorithm>
 #include <memory>
 #include <type_traits>
 #include <cassert>
 
-#ifdef USE_DIRECT_TBB
-struct WorkerBase {};
-using SplitType = tbb::split;
-#else
-using WorkerBase = RcppParallel::Worker;
-using SplitType = RcppParallel::Split;
-#endif
+#include "validate_finite.h"
 
 namespace robscale::qnsn {
 
 constexpr size_t SN_MAX_STACK = ROBSCALE_SN_STACK_THRESHOLD;
+// OPT-S3: Micro-buffer threshold for L1-resident fast path (n <= 128 → 1 KB stack frame).
+constexpr size_t SN_MICRO_SIZE = 128;
+
+// --- SHARED INNER LOOP ---
+
+// Walking-window inner loop shared by SnWorker, Tier-1, and Tier-2.
+// Computes inner_medians[i] = min_L max(sx[i]-sx[L], sx[L+h]-sx[i]) for each i
+// in [begin, end), where L walks monotonically forward (amortised O(n) total).
+//
+// Parameters:
+//   sx      - sorted input array (RESTRICT: does not alias im)
+//   n       - total number of elements (used to compute L bounds)
+//   im      - output array for inner medians (RESTRICT: does not alias sx)
+//   begin   - first index to process (inclusive)
+//   end     - last index to process (exclusive)
+//   L_init  - initial value of the walking pointer L (caller computes via
+//             binary search for sub-range chunks; pass 0 for full-range serial)
+template <typename T>
+#if defined(__GNUC__) || defined(__clang__)
+__attribute__((always_inline))
+#endif
+static inline void sn_inner_serial(
+    const T* ROBSCALE_RESTRICT sx,
+    int32_t n,
+    T* ROBSCALE_RESTRICT im,
+    int32_t begin,
+    int32_t end,
+    int32_t L_init) noexcept {
+  int32_t h = static_cast<int32_t>(static_cast<size_t>(n) / 2);
+  int32_t L = L_init;
+  for (int32_t i = begin; i < end; ++i) {
+    int32_t L_min = (std::max)(0, i - h);
+    int32_t L_max = (std::min)(i, n - 1 - h);
+    if (L < L_min) L = L_min;
+    T candidate = (std::max)(sx[i] - sx[L], sx[L + h] - sx[i]);
+    while (L < L_max) {
+      T next = (std::max)(sx[i] - sx[L + 1], sx[L + 1 + h] - sx[i]);
+      if (candidate < next) break;
+      L++;
+      candidate = next;
+    }
+    im[i] = candidate;
+  }
+}
 
 // --- SN ESTIMATOR WORKER ---
 
+// OPT-S4: ROBSCALE_RESTRICT on pointer members: the compiler can now prove
+// sorted_x and results do not alias, enabling load hoisting across the inner loop.
 template <typename T>
 struct SnWorker : public WorkerBase {
-  const T* sorted_x;
+  const T* ROBSCALE_RESTRICT sorted_x;
   size_t n;
-  mutable T* results; // mutable to allow updating results in const operator()
+  mutable T* ROBSCALE_RESTRICT results; // mutable to allow updating results in const operator()
 
   SnWorker(const T* sorted_x, size_t n, T* results)
       : sorted_x(sorted_x), n(n), results(results) {}
-
-#ifdef USE_DIRECT_TBB
-  void operator()(const tbb::blocked_range<size_t>& r) const {
-    const_cast<SnWorker*>(this)->operator()(r.begin(), r.end());
-  }
-#endif
 
   void operator()(size_t begin, size_t end) {
     if (ROBSCALE_UNLIKELY(begin >= end)) return;
@@ -79,49 +107,20 @@ struct SnWorker : public WorkerBase {
       }
     }
 
-    for (; i < static_cast<int32_t>(end); ++i) {
-      int32_t L_min = (std::max)(0, i - h);
-      int32_t L_max = (std::min)(i, static_cast<int32_t>(n) - 1 - h);
-      if (L < L_min) L = L_min;
-
-      T candidate = (std::max)(sorted_x[i] - sorted_x[L], sorted_x[L + h] - sorted_x[i]);
-      while (L < L_max) {
-        T next = (std::max)(sorted_x[i] - sorted_x[L + 1], sorted_x[L + 1 + h] - sorted_x[i]);
-        if (candidate < next) break;
-        L++;
-        candidate = next;
-      }
-      results[i] = candidate;
-    }
+    // Delegate the walking-window loop to the shared template function.
+    sn_inner_serial(sorted_x, static_cast<int32_t>(n), results,
+                    static_cast<int32_t>(begin), static_cast<int32_t>(end), L);
   }
 };
 
-// Post-sort kernel: sorted_x is read-only, allocates its own inner_medians.
+// OPT-S2: Large-n heap path extracted into a NOINLINE function to isolate the
+// heap-allocation frame from the hot small-n stack path inside sn_kernel.
+// This mirrors the OPT-M1/OPT-I1 pattern: the compiler can fully inline and
+// optimise the small-n branch without heap-allocation machinery polluting the
+// instruction cache or preventing stack-frame optimisations.
 template <typename T>
-double sn_kernel(const T* sorted_x, size_t n) {
+ROBSCALE_NOINLINE double sn_kernel_large(const T* sorted_x, size_t n) {
   const auto& config = RuntimeConfig::get();
-
-  if (n <= config.sn_stack_threshold) {
-    assert(config.sn_stack_threshold <= SN_MAX_STACK);
-    T inner_medians[SN_MAX_STACK];
-    int32_t h = static_cast<int32_t>(n / 2);
-    int32_t L = 0;
-    for (int32_t i = 0; i < static_cast<int32_t>(n); ++i) {
-      int32_t L_min = (std::max)(0, i - h);
-      int32_t L_max = (std::min)(i, static_cast<int32_t>(n) - 1 - h);
-      if (L < L_min) L = L_min;
-      T candidate = (std::max)(sorted_x[i] - sorted_x[L], sorted_x[L + h] - sorted_x[i]);
-      while (L < L_max) {
-        T next = (std::max)(sorted_x[i] - sorted_x[L + 1], sorted_x[L + 1 + h] - sorted_x[i]);
-        if (candidate < next) break;
-        L++;
-        candidate = next;
-      }
-      inner_medians[i] = candidate;
-    }
-    double raw = robscale::adaptive_lowmedian_select(inner_medians, n);
-    return raw * CONST_SN * get_sn_factor(n);
-  }
 
   // Heap path: only inner_medians (n elements, not 2n — sorted_x provided by caller)
   std::unique_ptr<T[]> inner_medians_buf(new T[n]);
@@ -132,8 +131,9 @@ double sn_kernel(const T* sorted_x, size_t n) {
     worker(0, n);
   } else {
     SnWorker<T> worker(sorted_x, n, inner_medians);
-#ifdef USE_DIRECT_TBB
-    tbb::parallel_for(tbb::blocked_range<size_t>(0, n, config.grain_size), worker);
+#if defined(ROBSCALE_HAS_SYSTEM_TBB) || defined(USE_DIRECT_TBB)
+    tbb::parallel_for(tbb::blocked_range<size_t>(0, n, config.grain_size),
+                      [&worker](const tbb::blocked_range<size_t>& r) { worker(r.begin(), r.end()); });
 #else
     RcppParallel::parallelFor(0, n, worker, config.grain_size);
 #endif
@@ -143,24 +143,101 @@ double sn_kernel(const T* sorted_x, size_t n) {
   return raw * CONST_SN * get_sn_factor(n);
 }
 
+// Post-sort kernel: sorted_x is read-only, allocates its own inner_medians.
+template <typename T>
+double sn_kernel(const T* sorted_x, size_t n) {
+  const auto& config = RuntimeConfig::get();
+
+  // OPT-S3: Tier 1 — micro path: n <= SN_MICRO_SIZE (128). inner_medians fits in
+  // ~1 KB, fully L1-resident. Avoids the 16 KB SN_MAX_STACK frame for small inputs.
+  // OPT-S4: RESTRICT aliases allow the compiler to hoist loads and eliminate
+  // aliasing barriers between sorted_x reads and inner_medians writes.
+  if (n <= SN_MICRO_SIZE) {
+    T inner_medians[SN_MICRO_SIZE];
+    // OPT-S4: RESTRICT aliases preserve aliasing-free contract required by sn_inner_serial.
+    const T* ROBSCALE_RESTRICT sx = sorted_x;
+    T* ROBSCALE_RESTRICT im = inner_medians;
+    // Tier-1 serial path: full range, L starts at 0.
+    sn_inner_serial(sx, static_cast<int32_t>(n), im, 0, static_cast<int32_t>(n), 0);
+    // OPT-S5: n <= 16 fast path — small_sort + direct index avoids FR/pdqselect dispatch.
+    if (n <= 16) {
+      robscale::small_sort(inner_medians, n);
+      double raw = static_cast<double>(inner_medians[(n - 1) / 2]);
+      return raw * CONST_SN * get_sn_factor(n);
+    }
+    double raw = robscale::adaptive_lowmedian_select(inner_medians, n);
+    return raw * CONST_SN * get_sn_factor(n);
+  }
+
+  // Tier 2 — medium stack path: SN_MICRO_SIZE < n <= sn_stack_threshold (2048). 16 KB frame.
+  // OPT-S4: RESTRICT aliases allow the compiler to hoist loads and eliminate
+  // aliasing barriers between sorted_x reads and inner_medians writes.
+  if (n <= config.sn_stack_threshold) {
+    assert(config.sn_stack_threshold <= SN_MAX_STACK);
+    T inner_medians[SN_MAX_STACK];
+    // OPT-S4: RESTRICT aliases preserve aliasing-free contract required by sn_inner_serial.
+    const T* ROBSCALE_RESTRICT sx = sorted_x;
+    T* ROBSCALE_RESTRICT im = inner_medians;
+    // Tier-2 serial path: full range, L starts at 0.
+    sn_inner_serial(sx, static_cast<int32_t>(n), im, 0, static_cast<int32_t>(n), 0);
+    double raw = robscale::adaptive_lowmedian_select(inner_medians, n);
+    return raw * CONST_SN * get_sn_factor(n);
+  }
+
+  // Tier 3 — large heap path (n > sn_stack_threshold).
+  return sn_kernel_large(sorted_x, n);
+}
+
+// OPT-S1: Large-n heap path extracted into a NOINLINE function to isolate the
+// large heap-allocation frame from the hot small-n stack path. This mirrors the
+// OPT-M1/OPT-I1 pattern: the compiler can now fully inline and optimise the
+// small-n branch without the large-n allocation machinery polluting the
+// instruction cache or preventing stack-frame optimisations.
+template <typename T>
+ROBSCALE_NOINLINE double C_sn_impl_large(const T* x_ptr, size_t n) {
+  std::unique_ptr<T[]> sorted_buf(new T[n]);
+  T* sorted_x = sorted_buf.get();
+  // Caller (C_sn_impl) already validated finite; clean copy
+  std::memcpy(sorted_x, x_ptr, n * sizeof(T));
+  // n > sn_stack_threshold >= SN_MICRO_SIZE (128) > 16, so n <= 16 is
+  // structurally unreachable here — optimized_sort is always correct.
+  optimized_sort(sorted_x, sorted_x + n);
+
+  return sn_kernel(sorted_x, n);
+}
+
+// OPT-S3: Medium stack path (SN_MICRO_SIZE < n <= sn_stack_threshold) extracted
+// into a NOINLINE function so the compiler cannot merge the 16 KB SN_MAX_STACK
+// frame with the 1 KB SN_MICRO_SIZE frame in the hot micro path.
+template <typename T>
+ROBSCALE_NOINLINE double C_sn_impl_medium(const T* x_ptr, size_t n) {
+  assert(n <= SN_MAX_STACK);
+  T sorted_x[SN_MAX_STACK];
+  // Caller (C_sn_impl) already validated finite; clean copy
+  std::memcpy(sorted_x, x_ptr, n * sizeof(T));
+  // n > SN_MICRO_SIZE (128) > 16 — small_sort branch is structurally unreachable.
+  optimized_sort(sorted_x, sorted_x + n);
+  return sn_kernel(sorted_x, n);
+}
+
 template <typename T>
 double C_sn_impl(const T* x_ptr, size_t n) {
   if (ROBSCALE_UNLIKELY(n < 2)) return R_NaReal;
   if (ROBSCALE_UNLIKELY(n > 6060000000ULL)) {
     Rcpp::stop("robscale Error: sample size n > 6.06 * 10^9 overflows 64-bit boundaries.");
   }
+  // Validate at boundary — enables clean memcpy in tier copy loops
+  if constexpr (std::is_floating_point_v<T>) {
+    validate_finite(x_ptr, static_cast<int>(n));
+  }
 
   const auto& config = RuntimeConfig::get();
 
-  if (n <= config.sn_stack_threshold) {
-    assert(config.sn_stack_threshold <= SN_MAX_STACK);
-    T sorted_x[SN_MAX_STACK];
-    for (size_t i = 0; i < n; ++i) {
-      if constexpr (std::is_floating_point_v<T>) {
-        if (ROBSCALE_UNLIKELY(!std::isfinite(x_ptr[i]))) return R_NaReal;
-      }
-      sorted_x[i] = x_ptr[i];
-    }
+  // OPT-S3: Tier 1 — micro path: n <= SN_MICRO_SIZE (128). sorted_x fits in ~1 KB (L1-resident).
+  if (n <= SN_MICRO_SIZE) {
+    T sorted_x[SN_MICRO_SIZE];
+    // Caller (C_sn_impl) already validated finite; clean copy
+    std::memcpy(sorted_x, x_ptr, n * sizeof(T));
     if (n <= 16) {
       robscale::small_sort(sorted_x, n);
     } else {
@@ -169,19 +246,13 @@ double C_sn_impl(const T* x_ptr, size_t n) {
     return sn_kernel(sorted_x, n);
   }
 
-  // Heap path: copy + sort, then delegate to kernel
-  std::unique_ptr<T[]> sorted_buf(new T[n]);
-  T* sorted_x = sorted_buf.get();
-
-  for (size_t i = 0; i < n; ++i) {
-    if constexpr (std::is_floating_point_v<T>) {
-      if (ROBSCALE_UNLIKELY(!std::isfinite(x_ptr[i]))) return R_NaReal;
-    }
-    sorted_x[i] = x_ptr[i];
+  // Tier 2 — medium stack path: SN_MICRO_SIZE < n <= sn_stack_threshold.
+  if (n <= config.sn_stack_threshold) {
+    assert(config.sn_stack_threshold <= SN_MAX_STACK);
+    return C_sn_impl_medium(x_ptr, n);
   }
-  optimized_sort(sorted_x, sorted_x + n);
 
-  return sn_kernel(sorted_x, n);
+  return C_sn_impl_large(x_ptr, n);
 }
 
 // Sorted variant: input MUST be sorted ascending. No copy, no sort, no NaN scan.
@@ -192,30 +263,68 @@ double C_sn_impl_sorted(const T* sorted_x, size_t n) {
   return sn_kernel(sorted_x, n);
 }
 
+// OPT-S7: Workspace-accepting overload of sn_kernel for large-n heap path.
+// When workspace != nullptr AND n > sn_stack_threshold, the provided buffer
+// (caller guarantees >= n elements) is used as inner_medians instead of
+// heap-allocating. For n <= sn_stack_threshold the workspace is ignored and
+// the existing stack path (Tier 1 or Tier 2) is used unchanged.
+template <typename T>
+double sn_kernel(const T* sorted_x, size_t n, T* workspace) {
+  const auto& config = RuntimeConfig::get();
+  if (n <= config.sn_stack_threshold) {
+    // Tier 1 / Tier 2: stack path unchanged — workspace ignored.
+    return sn_kernel(sorted_x, n);
+  }
+  // Tier 3 heap path: use caller-supplied workspace instead of heap-allocating.
+  // workspace != nullptr is a pre-condition for n > sn_stack_threshold callers.
+  T* inner_medians = workspace;
+  if (n < config.sn_parallel_threshold) {
+    SnWorker<T> worker(sorted_x, n, inner_medians);
+    worker(0, n);
+  } else {
+    SnWorker<T> worker(sorted_x, n, inner_medians);
+#if defined(ROBSCALE_HAS_SYSTEM_TBB) || defined(USE_DIRECT_TBB)
+    tbb::parallel_for(tbb::blocked_range<size_t>(0, n, config.grain_size),
+                      [&worker](const tbb::blocked_range<size_t>& r) { worker(r.begin(), r.end()); });
+#else
+    RcppParallel::parallelFor(0, n, worker, config.grain_size);
+#endif
+  }
+  double raw = robscale::adaptive_lowmedian_select(inner_medians, n);
+  return raw * CONST_SN * get_sn_factor(n);
+}
+
+// OPT-S7: Workspace-accepting overload of C_sn_impl_sorted.
+// Delegates to the workspace-accepting sn_kernel. workspace may be nullptr
+// only when n <= sn_stack_threshold (stack path ignores it); for n above
+// the threshold the caller must supply a buffer of >= n doubles.
+// Pre-condition: n >= 2 (guarded by the n < 2 check below).
+template <typename T>
+double C_sn_impl_sorted(const T* sorted_x, size_t n, T* workspace) {
+  if (ROBSCALE_UNLIKELY(n < 2)) return R_NaReal;
+  assert(std::is_sorted(sorted_x, sorted_x + n));
+  return sn_kernel(sorted_x, n, workspace);
+}
+
 // Explicit template instantiations
 template double C_sn_impl<double>(const double*, size_t);
-template double C_sn_impl<float>(const float*, size_t);
 template double C_sn_impl_sorted<double>(const double*, size_t);
+template double C_sn_impl_sorted<double>(const double*, size_t, double*);
 
 } // namespace robscale::qnsn
 
-// [[Rcpp::export]]
+// [[Rcpp::export(rng = false)]]
 double C_sn_fast(Rcpp::NumericVector x) { 
   return robscale::qnsn::C_sn_impl(x.begin(), static_cast<size_t>(x.size())); 
 }
 
-// [[Rcpp::export]]
-double C_sn_float(Rcpp::NumericVector x) {
-  std::vector<float> x_float(x.begin(), x.end());
-  return robscale::qnsn::C_sn_impl(x_float.data(), x_float.size());
-}
-
-// [[Rcpp::export]]
+// [[Rcpp::export(rng = false)]]
 double C_sn_int_fast(Rcpp::IntegerVector x) { 
   return robscale::qnsn::C_sn_impl(x.begin(), static_cast<size_t>(x.size())); 
 }
 
-// [[Rcpp::export]]
+// [[Rcpp::export(rng = false)]]
 double C_get_sn_factor(int n) {
   return robscale::qnsn::get_sn_factor(static_cast<size_t>(n));
 }
+

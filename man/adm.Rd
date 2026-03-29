@@ -4,7 +4,14 @@
 \alias{adm}
 \title{Average Distance to the Median}
 \usage{
-adm(x, center, constant = 1.2533141373155, na.rm = FALSE)
+adm(
+  x,
+  center = NULL,
+  constant = 1.2533141373155,
+  na.rm = FALSE,
+  ci = FALSE,
+  level = 0.95
+)
 }
 \arguments{
 \item{x}{A numeric vector.}
@@ -21,6 +28,12 @@ absolute deviation.}
 \item{na.rm}{Logical.  If \code{TRUE}, \code{NA} values are stripped from
 \code{x} before computation.  If \code{FALSE} (the default), the presence
 of any \code{NA} raises an error.}
+
+\item{ci}{Logical. If \code{TRUE}, return a \code{"robscale_ci"} object
+with the point estimate and asymptotic confidence interval.
+Default: \code{FALSE}.}
+
+\item{level}{Confidence level for the interval (default 0.95).}
 }
 \value{
 A single numeric value: the scaled mean absolute deviation from the
@@ -59,11 +72,10 @@ ideal \bold{implosion fallback} for the M-estimator of scale in
 
 \strong{Computational Performance.}
 This implementation employs a tiered selection strategy: optimal sorting
-networks for very small samples (\eqn{n \le 16}) and a C++17 introselect
-algorithm for larger datasets. This approach provides an \eqn{O(n)}
-worst-case time complexity, typically outperforming pure-R implementations
-by an order of magnitude. Performance is further enhanced by avoiding the
-full sort required by the standard \code{\link{median}} function.
+networks for \eqn{n \le 16} and adaptive \eqn{O(n)} selection
+(Floyd--Rivest or pdqselect, depending on cache-derived thresholds) for
+larger datasets. This avoids the full sort required by the standard
+\code{\link{median}} function.
 }
 \examples{
 adm(c(1:9))

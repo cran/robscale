@@ -1,13 +1,17 @@
 #include "robscale_config.h"
+#include "robust_core.h"
 #include <Rcpp.h>
 #include <cmath>
 
-// [[Rcpp::export]]
+#include "validate_finite.h"
+
+// [[Rcpp::export(rng = false)]]
 double sd_c4_impl(Rcpp::NumericVector x) {
   int n = x.size();
   if (n < 2) return NA_REAL;
 
   const double* xp = x.begin();
+  validate_finite(xp, n);
 
   // Welford's online algorithm for numerically stable variance
   double mean = xp[0];

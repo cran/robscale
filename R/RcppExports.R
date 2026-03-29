@@ -9,6 +9,22 @@ adm_impl_auto <- function(x, constant) {
     .Call(`_robscale_adm_impl_auto`, x, constant)
 }
 
+rob_scale_diag_impl <- function(x_r, maxit = 80L, tol = 1.4901161193847656e-8) {
+    .Call(`_robscale_rob_scale_diag_impl`, x_r, maxit, tol)
+}
+
+bench_median_net_impl <- function(x) {
+    .Call(`_robscale_bench_median_net_impl`, x)
+}
+
+bench_fr_select_impl <- function(x) {
+    .Call(`_robscale_bench_fr_select_impl`, x)
+}
+
+cpp_single_estimator_ci_bounds <- function(x, est, estimator_id, n_boot, level, method_code) {
+    .Call(`_robscale_cpp_single_estimator_ci_bounds`, x, est, estimator_id, n_boot, level, method_code)
+}
+
 cpp_scale_ensemble <- function(x, n_boot) {
     .Call(`_robscale_cpp_scale_ensemble`, x, n_boot)
 }
@@ -65,16 +81,16 @@ rob_scale_impl <- function(x, has_loc, loc_val, implbound, maxit, tol, fallback)
     .Call(`_robscale_rob_scale_impl`, x, has_loc, loc_val, implbound, maxit, tol, fallback)
 }
 
+C_rob_scale_fast <- function(x) {
+    .Call(`_robscale_C_rob_scale_fast`, x)
+}
+
 sd_c4_impl <- function(x) {
     .Call(`_robscale_sd_c4_impl`, x)
 }
 
 C_sn_fast <- function(x) {
     .Call(`_robscale_C_sn_fast`, x)
-}
-
-C_sn_float <- function(x) {
-    .Call(`_robscale_C_sn_float`, x)
 }
 
 C_sn_int_fast <- function(x) {

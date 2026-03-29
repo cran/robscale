@@ -14,6 +14,10 @@
 #' @param na.rm Logical.  If \code{TRUE}, \code{NA} values are stripped from
 #'   \code{x} before computation.  If \code{FALSE} (the default), the presence
 #'   of any \code{NA} raises an error.
+#' @param ci Logical. If \code{TRUE}, return a \code{"robscale_ci"} object
+#'   with the point estimate and asymptotic confidence interval.
+#'   Default: \code{FALSE}.
+#' @param level Confidence level for the interval (default 0.95).
 #'
 #' @details
 #' The average distance to the median (ADM) is defined as
@@ -43,11 +47,10 @@
 #'
 #' \strong{Computational Performance.}
 #' This implementation employs a tiered selection strategy: optimal sorting
-#' networks for very small samples (\eqn{n \le 16}) and a C++17 introselect
-#' algorithm for larger datasets. This approach provides an \eqn{O(n)}
-#' worst-case time complexity, typically outperforming pure-R implementations
-#' by an order of magnitude. Performance is further enhanced by avoiding the
-#' full sort required by the standard \code{\link{median}} function.
+#' networks for \eqn{n \le 16} and adaptive \eqn{O(n)} selection
+#' (Floyd--Rivest or pdqselect, depending on cache-derived thresholds) for
+#' larger datasets. This avoids the full sort required by the standard
+#' \code{\link{median}} function.
 #'
 #' @return A single numeric value: the scaled mean absolute deviation from the
 #'   center.  Returns \code{NA} if \code{x} has length zero after removal of
@@ -79,18 +82,21 @@
 #'
 #' @keywords univar robust
 #' @export
-adm <- function(x, center, constant = 1.2533141373155001, na.rm = FALSE) {
-  if (na.rm) {
-    x <- x[!is.na(x)]
-  } else {
-    if (anyNA(x)) {
-      stop("There are NAs in the data yet na.rm is FALSE")
-    }
+adm <- function(x, center = NULL, constant = 1.2533141373155001, na.rm = FALSE,
+                ci = FALSE, level = 0.95) {
+  if (!is.numeric(x)) stop("'x' must be a numeric vector")
+  if (na.rm) x <- x[!is.na(x)]
+  n <- length(x)
+  if (n == 0L) return(NA_real_)
+  if (ci) {
+    if (!is.numeric(level) || length(level) != 1L || level <= 0 || level >= 1)
+      stop("'level' must be a single numeric value in (0, 1)")
   }
-  if (length(x) == 0L) return(NA_real_)
-  if (missing(center)) {
-    adm_impl_auto(x, constant)
+  if (is.null(center)) {
+    res <- .Call(`_robscale_adm_impl_auto`, x, constant)
   } else {
-    adm_impl(x, center, constant)
+    res <- .Call(`_robscale_adm_impl`, x, center, constant)
   }
+  if (ci) return(.analytical_ci(res, n, are = .are_values[["adm"]], level, "adm"))
+  res
 }

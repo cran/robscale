@@ -30,7 +30,7 @@
 #' GMD is a consistent estimator of \eqn{\sigma} under the Gaussian model. The
 #' GMD achieves an \bold{asymptotic relative efficiency (ARE) of 0.98} compared
 #' to the sample standard deviation, making it the most efficient robust
-#' alternative in this package. Its breakdown point is approximately 29.3\%.
+#' alternative in this package. Its breakdown point is \eqn{1 - 1/\sqrt{2}}{1 - 1/sqrt(2)}, approximately 29.3\%.
 #'
 #' @return If \code{ci = FALSE} (default), a single numeric value: the scaled
 #'   Gini mean difference. Returns \code{0} if \code{n < 2}; returns \code{NA}
@@ -58,16 +58,15 @@
 #' @export
 gmd <- function(x, constant = 0.886226925452758, na.rm = FALSE,
                 ci = FALSE, level = 0.95) {
-  if (na.rm) {
-    x <- x[!is.na(x)]
-  } else {
-    if (anyNA(x)) {
-      stop("There are NAs in the data yet na.rm is FALSE")
-    }
-  }
+  if (!is.numeric(x)) stop("'x' must be a numeric vector")
+  if (na.rm) x <- x[!is.na(x)]
   n <- length(x)
   if (n == 0L) return(NA_real_)
-  res <- gmd_impl(x, constant)
-  if (ci) return(.analytical_ci(res, n, are = 0.98, level, "gmd"))
+  if (ci) {
+    if (!is.numeric(level) || length(level) != 1L || level <= 0 || level >= 1)
+      stop("'level' must be a single numeric value in (0, 1)")
+  }
+  res <- .Call(`_robscale_gmd_impl`, x, constant)
+  if (ci) return(.analytical_ci(res, n, are = .are_values[["gmd"]], level, "gmd"))
   res
 }

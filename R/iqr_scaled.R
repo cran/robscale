@@ -58,16 +58,15 @@
 #' @export
 iqr_scaled <- function(x, constant = 0.741301109252801, na.rm = FALSE,
                        ci = FALSE, level = 0.95) {
-  if (na.rm) {
-    x <- x[!is.na(x)]
-  } else {
-    if (anyNA(x)) {
-      stop("There are NAs in the data yet na.rm is FALSE")
-    }
-  }
+  if (!is.numeric(x)) stop("'x' must be a numeric vector")
+  if (na.rm) x <- x[!is.na(x)]
   n <- length(x)
   if (n == 0L) return(NA_real_)
-  res <- iqr_impl(x, constant)
-  if (ci) return(.analytical_ci(res, n, are = 0.37, level, "iqr_scaled"))
+  if (ci) {
+    if (!is.numeric(level) || length(level) != 1L || level <= 0 || level >= 1)
+      stop("'level' must be a single numeric value in (0, 1)")
+  }
+  res <- .Call(`_robscale_iqr_impl`, x, constant)
+  if (ci) return(.analytical_ci(res, n, are = .are_values[["iqr_scaled"]], level, "iqr_scaled"))
   res
 }

@@ -3,7 +3,7 @@
 #' Computes the robust estimator of scale \eqn{S_n} proposed by Rousseeuw and Croux (1993).
 #'
 #' @param x A numeric vector of observations.
-#' @param constant Consistency constant. Default is \eqn{1.1926}.
+#' @param constant Consistency constant. Default is \eqn{1.1926} (full precision: 1.19259855312321).
 #' @param finite.corr Logical; if \code{TRUE}, a finite-sample correction factor is applied.
 #' @param na.rm Logical; if \code{TRUE}, \code{NA} values are removed before computation.
 #' @param ci Logical. If \code{TRUE}, return a \code{"robscale_ci"} object
@@ -64,27 +64,25 @@
 #' sn(x, ci = TRUE)
 #'
 #' @export
-sn <- function(x, constant = 1.1926, finite.corr = TRUE, na.rm = FALSE,
+sn <- function(x, constant = 1.19259855312321, finite.corr = TRUE, na.rm = FALSE,
                ci = FALSE, level = 0.95) {
+  if (!is.numeric(x)) stop("'x' must be a numeric vector")
   if (na.rm) x <- x[!is.na(x)]
   n <- length(x)
   if (n < 2) return(NA_real_)
 
-  fast <- !ci && identical(constant, 1.1926) && finite.corr
-
-  if (is.double(x)) {
-    if (fast) return(.Call(`_robscale_C_sn_fast`, x))
-    res <- .Call(`_robscale_C_sn_fast`, x)
-  } else if (is.integer(x)) {
-    if (fast) return(.Call(`_robscale_C_sn_int_fast`, x))
-    res <- .Call(`_robscale_C_sn_int_fast`, x)
-  } else {
-    x <- as.double(x)
-    if (fast) return(.Call(`_robscale_C_sn_fast`, x))
-    res <- .Call(`_robscale_C_sn_fast`, x)
+  if (ci) {
+    if (!is.numeric(level) || length(level) != 1L || level <= 0 || level >= 1)
+      stop("'level' must be a single numeric value in (0, 1)")
   }
 
-  if (!identical(constant, 1.1926)) {
+  fast <- !ci && constant == 1.19259855312321 && finite.corr
+
+  res <- if (is.double(x)) .Call(`_robscale_C_sn_fast`, x)
+         else .Call(`_robscale_C_sn_int_fast`, x)
+  if (fast) return(res)
+
+  if (constant != 1.19259855312321) {
     res <- res * (constant / 1.19259855312321)
   }
 
@@ -92,6 +90,6 @@ sn <- function(x, constant = 1.1926, finite.corr = TRUE, na.rm = FALSE,
     res <- res / .Call(`_robscale_C_get_sn_factor`, n)
   }
 
-  if (ci) return(.analytical_ci(res, n, are = 0.58, level, "sn"))
+  if (ci) return(.analytical_ci(res, n, are = .are_values[["sn"]], level, "sn"))
   res
 }

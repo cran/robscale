@@ -3,6 +3,7 @@
 
 #include <cstddef>
 #include <cmath>
+#include <memory>
 
 /**
  * robscale_config.h
@@ -29,9 +30,28 @@
 
 // Fixed thresholds (not cache-sensitive; cache-sensitive thresholds are
 // derived from hw.l2_per_core at runtime in RuntimeConfig::calculate_thresholds)
-#define ROBSCALE_QN_EXACT_THRESHOLD    64
+#define ROBSCALE_QN_EXACT_THRESHOLD    40
 #define ROBSCALE_SN_STACK_THRESHOLD    2048
 #define ROBSCALE_SORT_BOOST_THRESHOLD  512
+
+/**
+ * Threshold for median_select: use median_net (sort-network AND median-network)
+ * for n <= this value, floyd_rivest_select (→ std::nth_element for n < 600)
+ * for n > this value.
+ *
+ * Calibrated 2026-03-21 (OPT-A):
+ *   - median_net comparator growth is O(n^1.5): n=8→16 swaps, n=16→46,
+ *     n=32→128, n=64→337.  Called TWICE per rob_scale_core (median + MAD).
+ *   - FR/nth_element is O(n) throughout.
+ *   - Theoretical crossover at n~16 (FR overhead ≈ 12 comparisons vs 46 for
+ *     network at n=16).  Confirmed by benchmark evidence
+ *     (see findings.md F-10 and F-2).
+ *   - Set to 16: at n≤16 the network is tighter (16–46 swaps, fits L1
+ *     entirely); at n>16 FR wins and the gap grows with n.
+ */
+#ifndef ROBSCALE_SORT_NETWORK_THRESHOLD
+#define ROBSCALE_SORT_NETWORK_THRESHOLD 16
+#endif
 
 
 // --- Portability & Optimization Macros ---
@@ -59,6 +79,30 @@
  */
 #define ROBSCALE_MICRO_BUFFER_SIZE 128
 
+/**
+ * Prevent inlining so small-n paths get their own minimal stack frame.
+ */
+#if defined(_MSC_VER)
+  #define ROBSCALE_NOINLINE __declspec(noinline)
+#elif defined(__GNUC__) || defined(__clang__)
+  #define ROBSCALE_NOINLINE __attribute__((noinline))
+#else
+  #define ROBSCALE_NOINLINE
+#endif
+
+/**
+ * Mark non-static, non-exported internal functions as hidden.
+ * On Linux/ELF, default visibility causes calls to go through the PLT
+ * (Procedure Linkage Table), adding ~5-10 ns per call.  R packages compile
+ * to a single .so — internal functions are never interposed at runtime.
+ * hidden visibility lets the linker emit direct calls.
+ */
+#if (defined(__GNUC__) || defined(__clang__)) && !defined(_WIN32)
+#  define ROBSCALE_HIDDEN __attribute__((visibility("hidden")))
+#else
+#  define ROBSCALE_HIDDEN
+#endif
+
 
 // --- Common Statistical Constants ---
 
@@ -76,7 +120,15 @@ namespace robscale {
   constexpr double GMD_CONSISTENCY      = 0.886226925452758;  // sqrt(pi)/2
   constexpr double IQR_CONSISTENCY      = 0.741301109252801;  // 1/(Phi^-1(0.75) - Phi^-1(0.25))
   constexpr double RHO_SCALE_CONST      = 0.37394112142347236;
-  constexpr double INV_RHO_SCALE_CONST  = 1.0 / 0.37394112142347236;
+  constexpr double INV_RHO_SCALE_CONST  = 1.0 / RHO_SCALE_CONST;  // N3
+
+  /// MAD implosion threshold for M-scale and ensemble estimators.
+  /// When MAD(x) <= IMPLOSION_BOUND, more than 50% of observations are tied
+  /// and the scale is degenerate; triggers ADM fallback.
+  /// Value 1e-4: small enough to be effectively zero for practical scales,
+  /// but above floating-point noise for data with legitimate small spread.
+  /// Ref: Rousseeuw & Verboven (2002), Sec. 4.3.
+  constexpr double IMPLOSION_BOUND = 1e-4;
 
   // c4(n) consistency constant for unbiased standard deviation
   // Formula: sqrt(2/(n-1)) * Gamma(n/2) / Gamma((n-1)/2)
@@ -89,17 +141,50 @@ namespace robscale {
 }
 
 
+/// Tiered stack/heap scratch buffer.
+/// N_MICRO: fits in L1 (hot path for very small n, zero malloc overhead).
+/// N_STACK: fits in L2 (medium n, no heap allocation).
+/// Falls back to heap for n > N_STACK.
+/// Stack budget: default (128+2048)*8 = 17,408 bytes (~17KB). Safe for R's
+/// 8MB default stack but avoid instantiating in deeply recursive call chains.
+template <size_t N_MICRO = 128, size_t N_STACK = 2048>
+struct StackArena {
+  double buf_micro[N_MICRO];
+  double buf_stack[N_STACK];
+  std::unique_ptr<double[]> heap;
+
+  double* get(size_t n) {
+    if (n <= N_MICRO) return buf_micro;
+    if (n <= N_STACK) return buf_stack;
+    heap.reset(new double[n]);
+    return heap.get();
+  }
+};
+
 // --- Runtime SIMD dispatch ---
-// Per-function target attributes: the compiler emits AVX2/FMA instructions
-// for annotated functions without requiring -mavx2 globally.  This produces
-// a portable binary that activates AVX2 at runtime on capable hardware.
-// Supported by GCC 4.9+, all Clang, all Rtools MinGW-w64 GCC.
+// Per-function target attributes: the compiler emits AVX2/FMA or AVX-512F
+// instructions for annotated functions without requiring -mavx2 globally.
+// Produces a portable binary that activates the best available SIMD path
+// at runtime via CPUID.  Supported by GCC 4.9+, all Clang, Rtools MinGW GCC.
 #if (defined(__x86_64__) || defined(_M_X64)) && \
     (defined(__GNUC__) || defined(__clang__))
-  #define ROBSCALE_TARGET_AVX2  __attribute__((target("avx2,fma")))
-  #define ROBSCALE_HAS_AVX2_DISPATCH 1
+  #define ROBSCALE_TARGET_AVX2     __attribute__((target("avx2,fma")))
+  #define ROBSCALE_TARGET_AVX512F  __attribute__((target("avx512f")))
+  #define ROBSCALE_HAS_AVX2_DISPATCH   1
+  #define ROBSCALE_HAS_AVX512_DISPATCH 1
 #else
   #define ROBSCALE_TARGET_AVX2
+  #define ROBSCALE_TARGET_AVX512F
+#endif
+
+// Umbrella: any AVX2-vectorized tanh backend available.
+// Resolves to glibc libmvec _ZGVdN4v_tanh (preferred, 25-50% faster on
+// Zen/Skylake) or SLEEF Sleef_tanhd4_u10avx2 (fallback) via ROBSCALE_TANH4_AVX2.
+// libmvec works standalone without SLEEF; SLEEF is the fallback for older glibc
+// (< 2.35) or non-glibc platforms.
+#if defined(ROBSCALE_HAS_AVX2_DISPATCH) && \
+    (defined(ROBSCALE_HAS_GLIBC_MVEC) || defined(ROBSCALE_HAS_SLEEF))
+  #define ROBSCALE_HAS_AVX2_TANH 1
 #endif
 
 #endif // ROBSCALE_CONFIG_H

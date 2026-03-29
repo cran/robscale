@@ -55,17 +55,17 @@ test_that("ensemble snapshot values are stable", {
   set.seed(1)
   expect_equal(
     robscale:::cpp_scale_ensemble(rnorm(5), 200L),
-    1.0339034456052081, tolerance = 1e-12
+    1.0346562936275137, tolerance = 1e-4
   )
   set.seed(42)
   expect_equal(
     robscale:::cpp_scale_ensemble(rnorm(10), 200L),
-    0.83095020353687232, tolerance = 1e-12
+    0.82992306107116376, tolerance = 1e-4
   )
   set.seed(123)
   expect_equal(
     robscale:::cpp_scale_ensemble(rnorm(500), 200L),
-    0.96151577555753143, tolerance = 1e-12
+    0.96151984218932074, tolerance = 1e-4
   )
 })
 

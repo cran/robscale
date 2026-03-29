@@ -15,7 +15,6 @@ double adm_impl(Rcpp::NumericVector x, double center, double constant);
 RcppExport SEXP _robscale_adm_impl(SEXP xSEXP, SEXP centerSEXP, SEXP constantSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< Rcpp::NumericVector >::type x(xSEXP);
     Rcpp::traits::input_parameter< double >::type center(centerSEXP);
     Rcpp::traits::input_parameter< double >::type constant(constantSEXP);
@@ -28,10 +27,56 @@ double adm_impl_auto(Rcpp::NumericVector x, double constant);
 RcppExport SEXP _robscale_adm_impl_auto(SEXP xSEXP, SEXP constantSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< Rcpp::NumericVector >::type x(xSEXP);
     Rcpp::traits::input_parameter< double >::type constant(constantSEXP);
     rcpp_result_gen = Rcpp::wrap(adm_impl_auto(x, constant));
+    return rcpp_result_gen;
+END_RCPP
+}
+// rob_scale_diag_impl
+Rcpp::List rob_scale_diag_impl(Rcpp::NumericVector x_r, int maxit, double tol);
+RcppExport SEXP _robscale_rob_scale_diag_impl(SEXP x_rSEXP, SEXP maxitSEXP, SEXP tolSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type x_r(x_rSEXP);
+    Rcpp::traits::input_parameter< int >::type maxit(maxitSEXP);
+    Rcpp::traits::input_parameter< double >::type tol(tolSEXP);
+    rcpp_result_gen = Rcpp::wrap(rob_scale_diag_impl(x_r, maxit, tol));
+    return rcpp_result_gen;
+END_RCPP
+}
+// bench_median_net_impl
+double bench_median_net_impl(Rcpp::NumericVector x);
+RcppExport SEXP _robscale_bench_median_net_impl(SEXP xSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type x(xSEXP);
+    rcpp_result_gen = Rcpp::wrap(bench_median_net_impl(x));
+    return rcpp_result_gen;
+END_RCPP
+}
+// bench_fr_select_impl
+double bench_fr_select_impl(Rcpp::NumericVector x);
+RcppExport SEXP _robscale_bench_fr_select_impl(SEXP xSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type x(xSEXP);
+    rcpp_result_gen = Rcpp::wrap(bench_fr_select_impl(x));
+    return rcpp_result_gen;
+END_RCPP
+}
+// cpp_single_estimator_ci_bounds
+Rcpp::List cpp_single_estimator_ci_bounds(Rcpp::NumericVector x, double est, int estimator_id, int n_boot, double level, int method_code);
+RcppExport SEXP _robscale_cpp_single_estimator_ci_bounds(SEXP xSEXP, SEXP estSEXP, SEXP estimator_idSEXP, SEXP n_bootSEXP, SEXP levelSEXP, SEXP method_codeSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type x(xSEXP);
+    Rcpp::traits::input_parameter< double >::type est(estSEXP);
+    Rcpp::traits::input_parameter< int >::type estimator_id(estimator_idSEXP);
+    Rcpp::traits::input_parameter< int >::type n_boot(n_bootSEXP);
+    Rcpp::traits::input_parameter< double >::type level(levelSEXP);
+    Rcpp::traits::input_parameter< int >::type method_code(method_codeSEXP);
+    rcpp_result_gen = Rcpp::wrap(cpp_single_estimator_ci_bounds(x, est, estimator_id, n_boot, level, method_code));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -40,7 +85,6 @@ double cpp_scale_ensemble(Rcpp::NumericVector x, int n_boot);
 RcppExport SEXP _robscale_cpp_scale_ensemble(SEXP xSEXP, SEXP n_bootSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< Rcpp::NumericVector >::type x(xSEXP);
     Rcpp::traits::input_parameter< int >::type n_boot(n_bootSEXP);
     rcpp_result_gen = Rcpp::wrap(cpp_scale_ensemble(x, n_boot));
@@ -52,7 +96,6 @@ Rcpp::List cpp_scale_ensemble_ci(Rcpp::NumericVector x, int n_boot, double level
 RcppExport SEXP _robscale_cpp_scale_ensemble_ci(SEXP xSEXP, SEXP n_bootSEXP, SEXP levelSEXP, SEXP method_codeSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< Rcpp::NumericVector >::type x(xSEXP);
     Rcpp::traits::input_parameter< int >::type n_boot(n_bootSEXP);
     Rcpp::traits::input_parameter< double >::type level(levelSEXP);
@@ -66,7 +109,6 @@ double C_sn_sorted(Rcpp::NumericVector x);
 RcppExport SEXP _robscale_C_sn_sorted(SEXP xSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< Rcpp::NumericVector >::type x(xSEXP);
     rcpp_result_gen = Rcpp::wrap(C_sn_sorted(x));
     return rcpp_result_gen;
@@ -77,7 +119,6 @@ double C_qn_sorted(Rcpp::NumericVector x);
 RcppExport SEXP _robscale_C_qn_sorted(SEXP xSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< Rcpp::NumericVector >::type x(xSEXP);
     rcpp_result_gen = Rcpp::wrap(C_qn_sorted(x));
     return rcpp_result_gen;
@@ -88,7 +129,6 @@ double gmd_impl(Rcpp::NumericVector x, double constant);
 RcppExport SEXP _robscale_gmd_impl(SEXP xSEXP, SEXP constantSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< Rcpp::NumericVector >::type x(xSEXP);
     Rcpp::traits::input_parameter< double >::type constant(constantSEXP);
     rcpp_result_gen = Rcpp::wrap(gmd_impl(x, constant));
@@ -100,7 +140,6 @@ double iqr_impl(Rcpp::NumericVector x, double constant);
 RcppExport SEXP _robscale_iqr_impl(SEXP xSEXP, SEXP constantSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< Rcpp::NumericVector >::type x(xSEXP);
     Rcpp::traits::input_parameter< double >::type constant(constantSEXP);
     rcpp_result_gen = Rcpp::wrap(iqr_impl(x, constant));
@@ -112,7 +151,6 @@ double mad_impl_auto(Rcpp::NumericVector x, double constant);
 RcppExport SEXP _robscale_mad_impl_auto(SEXP xSEXP, SEXP constantSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< Rcpp::NumericVector >::type x(xSEXP);
     Rcpp::traits::input_parameter< double >::type constant(constantSEXP);
     rcpp_result_gen = Rcpp::wrap(mad_impl_auto(x, constant));
@@ -124,7 +162,6 @@ double mad_impl_center(Rcpp::NumericVector x, double center, double constant);
 RcppExport SEXP _robscale_mad_impl_center(SEXP xSEXP, SEXP centerSEXP, SEXP constantSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< Rcpp::NumericVector >::type x(xSEXP);
     Rcpp::traits::input_parameter< double >::type center(centerSEXP);
     Rcpp::traits::input_parameter< double >::type constant(constantSEXP);
@@ -137,7 +174,6 @@ double C_qn_fast(Rcpp::NumericVector x);
 RcppExport SEXP _robscale_C_qn_fast(SEXP xSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< Rcpp::NumericVector >::type x(xSEXP);
     rcpp_result_gen = Rcpp::wrap(C_qn_fast(x));
     return rcpp_result_gen;
@@ -148,7 +184,6 @@ double C_qn_int_fast(Rcpp::IntegerVector x);
 RcppExport SEXP _robscale_C_qn_int_fast(SEXP xSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type x(xSEXP);
     rcpp_result_gen = Rcpp::wrap(C_qn_int_fast(x));
     return rcpp_result_gen;
@@ -159,7 +194,6 @@ Rcpp::List get_qnsn_config();
 RcppExport SEXP _robscale_get_qnsn_config() {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
     rcpp_result_gen = Rcpp::wrap(get_qnsn_config());
     return rcpp_result_gen;
 END_RCPP
@@ -169,7 +203,6 @@ double C_get_qn_factor(int n);
 RcppExport SEXP _robscale_C_get_qn_factor(SEXP nSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< int >::type n(nSEXP);
     rcpp_result_gen = Rcpp::wrap(C_get_qn_factor(n));
     return rcpp_result_gen;
@@ -180,7 +213,6 @@ double rob_loc_impl(Rcpp::NumericVector x, bool has_scale, double scale_val, int
 RcppExport SEXP _robscale_rob_loc_impl(SEXP xSEXP, SEXP has_scaleSEXP, SEXP scale_valSEXP, SEXP maxitSEXP, SEXP tolSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< Rcpp::NumericVector >::type x(xSEXP);
     Rcpp::traits::input_parameter< bool >::type has_scale(has_scaleSEXP);
     Rcpp::traits::input_parameter< double >::type scale_val(scale_valSEXP);
@@ -195,7 +227,6 @@ double rob_scale_impl(Rcpp::NumericVector x, bool has_loc, double loc_val, doubl
 RcppExport SEXP _robscale_rob_scale_impl(SEXP xSEXP, SEXP has_locSEXP, SEXP loc_valSEXP, SEXP implboundSEXP, SEXP maxitSEXP, SEXP tolSEXP, SEXP fallbackSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< Rcpp::NumericVector >::type x(xSEXP);
     Rcpp::traits::input_parameter< bool >::type has_loc(has_locSEXP);
     Rcpp::traits::input_parameter< double >::type loc_val(loc_valSEXP);
@@ -207,12 +238,21 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// C_rob_scale_fast
+double C_rob_scale_fast(Rcpp::NumericVector x);
+RcppExport SEXP _robscale_C_rob_scale_fast(SEXP xSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type x(xSEXP);
+    rcpp_result_gen = Rcpp::wrap(C_rob_scale_fast(x));
+    return rcpp_result_gen;
+END_RCPP
+}
 // sd_c4_impl
 double sd_c4_impl(Rcpp::NumericVector x);
 RcppExport SEXP _robscale_sd_c4_impl(SEXP xSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< Rcpp::NumericVector >::type x(xSEXP);
     rcpp_result_gen = Rcpp::wrap(sd_c4_impl(x));
     return rcpp_result_gen;
@@ -223,20 +263,8 @@ double C_sn_fast(Rcpp::NumericVector x);
 RcppExport SEXP _robscale_C_sn_fast(SEXP xSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< Rcpp::NumericVector >::type x(xSEXP);
     rcpp_result_gen = Rcpp::wrap(C_sn_fast(x));
-    return rcpp_result_gen;
-END_RCPP
-}
-// C_sn_float
-double C_sn_float(Rcpp::NumericVector x);
-RcppExport SEXP _robscale_C_sn_float(SEXP xSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type x(xSEXP);
-    rcpp_result_gen = Rcpp::wrap(C_sn_float(x));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -245,7 +273,6 @@ double C_sn_int_fast(Rcpp::IntegerVector x);
 RcppExport SEXP _robscale_C_sn_int_fast(SEXP xSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type x(xSEXP);
     rcpp_result_gen = Rcpp::wrap(C_sn_int_fast(x));
     return rcpp_result_gen;
@@ -256,7 +283,6 @@ double C_get_sn_factor(int n);
 RcppExport SEXP _robscale_C_get_sn_factor(SEXP nSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< int >::type n(nSEXP);
     rcpp_result_gen = Rcpp::wrap(C_get_sn_factor(n));
     return rcpp_result_gen;
@@ -266,6 +292,10 @@ END_RCPP
 static const R_CallMethodDef CallEntries[] = {
     {"_robscale_adm_impl", (DL_FUNC) &_robscale_adm_impl, 3},
     {"_robscale_adm_impl_auto", (DL_FUNC) &_robscale_adm_impl_auto, 2},
+    {"_robscale_rob_scale_diag_impl", (DL_FUNC) &_robscale_rob_scale_diag_impl, 3},
+    {"_robscale_bench_median_net_impl", (DL_FUNC) &_robscale_bench_median_net_impl, 1},
+    {"_robscale_bench_fr_select_impl", (DL_FUNC) &_robscale_bench_fr_select_impl, 1},
+    {"_robscale_cpp_single_estimator_ci_bounds", (DL_FUNC) &_robscale_cpp_single_estimator_ci_bounds, 6},
     {"_robscale_cpp_scale_ensemble", (DL_FUNC) &_robscale_cpp_scale_ensemble, 2},
     {"_robscale_cpp_scale_ensemble_ci", (DL_FUNC) &_robscale_cpp_scale_ensemble_ci, 4},
     {"_robscale_C_sn_sorted", (DL_FUNC) &_robscale_C_sn_sorted, 1},
@@ -280,9 +310,9 @@ static const R_CallMethodDef CallEntries[] = {
     {"_robscale_C_get_qn_factor", (DL_FUNC) &_robscale_C_get_qn_factor, 1},
     {"_robscale_rob_loc_impl", (DL_FUNC) &_robscale_rob_loc_impl, 5},
     {"_robscale_rob_scale_impl", (DL_FUNC) &_robscale_rob_scale_impl, 7},
+    {"_robscale_C_rob_scale_fast", (DL_FUNC) &_robscale_C_rob_scale_fast, 1},
     {"_robscale_sd_c4_impl", (DL_FUNC) &_robscale_sd_c4_impl, 1},
     {"_robscale_C_sn_fast", (DL_FUNC) &_robscale_C_sn_fast, 1},
-    {"_robscale_C_sn_float", (DL_FUNC) &_robscale_C_sn_float, 1},
     {"_robscale_C_sn_int_fast", (DL_FUNC) &_robscale_C_sn_int_fast, 1},
     {"_robscale_C_get_sn_factor", (DL_FUNC) &_robscale_C_get_sn_factor, 1},
     {NULL, NULL, 0}
