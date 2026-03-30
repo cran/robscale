@@ -789,20 +789,15 @@ weights.</p>
 <code>robscale</code> evaluates <code>tanh</code> in bulk using the
 fastest available platform backend. The <code>configure</code> script
 selects one of two vectorized <code>tanh</code> libraries at compile
-time; at runtime, CPUID selects the widest available instruction
-set:</p>
+time; at runtime, CPUID selects the appropriate instruction set:</p>
 <ol style="list-style-type: decimal">
 <li><strong>Apple Accelerate</strong> (<code>vvtanh</code>): array-wide
 SIMD on macOS.</li>
 <li><strong>glibc libmvec</strong> (Linux x86_64, glibc <span class="math inline">\(\geq\)</span> 2.35) or <strong>SLEEF</strong>
-(fallback when libmvec is absent). Only one is linked per binary. Within
-the linked library, CPUID dispatches to:
-<ul>
-<li><strong>AVX-512 8-wide</strong> (<code>_ZGVeN8v_tanh</code>): 8
-doubles per iteration on AVX-512F hardware.</li>
-<li><strong>AVX2 4-wide</strong> (<code>_ZGVdN4v_tanh</code> or
-<code>Sleef_tanhd4_u10avx2</code>): 4 doubles per iteration.</li>
-</ul></li>
+(fallback when libmvec is absent). Only one is linked per binary. The
+AVX2 4-wide kernel (<code>_ZGVdN4v_tanh</code> or
+<code>Sleef_tanhd4_u10avx2</code>) processes 4 doubles per
+iteration.</li>
 <li><strong>OpenMP SIMD</strong> (<code>#pragma omp simd</code>):
 compiler-guided portable fallback.</li>
 <li><strong>Scalar</strong> <code>std::tanh</code>: universal
@@ -821,9 +816,14 @@ the BCa jackknife. This kernel activates for <span class="math inline">\(n \geq 
 <p><code>robscale</code> uses a tiered strategy rather than
 <code>sort()</code>:</p>
 <ul>
-<li><strong><span class="math inline">\(n \leq 16\)</span></strong>:
-optimal sorting networks (verified minimal comparator counts, compiled
-to branchless machine code at <code>-O2</code>):</li>
+<li><strong><span class="math inline">\(n \in \{8, 16, 32\}\)</span> on
+AVX2 hardware</strong>: SIMD selection networks (bitonic merge, 23–58%
+faster than scalar selection networks).</li>
+<li><strong><span class="math inline">\(n \leq 36\)</span></strong>:
+scalar selection networks for median computation.</li>
+<li><strong><span class="math inline">\(n \leq 56\)</span></strong>:
+branchless sorting networks for full-sort paths (GMD, <span class="math inline">\(Q_n\)</span> exact, <span class="math inline">\(S_n\)</span>), compiled to conditional-move
+instructions at <code>-O2</code>:</li>
 </ul>
 <table>
 <thead>
@@ -846,22 +846,25 @@ to branchless machine code at <code>-O2</code>):</li>
 <td align="right">19</td>
 </tr>
 <tr class="even">
-<td align="right">12</td>
-<td align="right">39</td>
-</tr>
-<tr class="odd">
 <td align="right">16</td>
 <td align="right">60</td>
+</tr>
+<tr class="odd">
+<td align="right">32</td>
+<td align="right">185</td>
+</tr>
+<tr class="even">
+<td align="right">56</td>
+<td align="right">438</td>
 </tr>
 </tbody>
 </table>
 <ul>
-<li><strong><span class="math inline">\(17 \leq n &lt;
-600\)</span></strong>: <code>std::nth_element</code> (introselect, <span class="math inline">\(O(n)\)</span> worst-case).</li>
-<li><strong><span class="math inline">\(n \geq 600\)</span></strong>:
+<li><strong><span class="math inline">\(37 \leq n\)</span> (selection) /
+<span class="math inline">\(57 \leq n\)</span> (sort)</strong>:
 Floyd–Rivest algorithm <span class="citation">(Floyd and Rivest
-1975)</span>, which narrows the active window to <span class="math inline">\(O(n^{2/3})\)</span> elements before
-partitioning.</li>
+1975)</span> or pdqselect, chosen per-estimator based on a runtime
+L2-cache-derived crossover threshold.</li>
 </ul>
 <p>The crossover between Floyd–Rivest and pdqselect is derived at
 runtime from the per-core L2 cache size; each estimator uses its own
